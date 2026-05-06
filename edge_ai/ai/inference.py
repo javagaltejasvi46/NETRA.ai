@@ -1,0 +1,129 @@
+"""
+LLM inference engine using llama.cpp.
+"""
+import logging
+from typing import Optional, TYPE_CHECKING
+from pathlib import Path
+
+if TYPE_CHECKING:
+    from edge_ai.ai.threat_analysis import ThreatAssessment
+
+logger = logging.getLogger(__name__)
+
+
+class InferenceEngine:
+    """
+    Manages LLM inference using llama.cpp with model preloading.
+    """
+    
+    def __init__(self, model_path: str, max_tokens: int, temperature: float, 
+                 threads: int, timeout: int, failsafe_handler=None):
+        """
+        Initialize inference engine and preload model.
+        
+        Args:
+            model_path: Path to GGUF model file
+            max_tokens: Maximum tokens to generate
+            temperature: Sampling temperature (0.0 to 2.0)
+            threads: Number of threads for inference
+            timeout: Inference timeout in seconds
+            failsafe_handler: Optional FailsafeHandler for fallback decisions
+        """
+        self.model_path = model_path
+        self.max_tokens = max_tokens
+        self.temperature = temperature
+        self.threads = threads
+        self.timeout = timeout
+        self.failsafe_handler = failsafe_handler
+        self.model = None
+        
+        # Verify model file exists
+        if not Path(model_path).exists():
+            raise FileNotFoundError(f"Model file not found: {model_path}")
+        
+        # Preload model
+        self._load_model()
+    
+    def _load_model(self) -> None:
+        """
+        Load the GGUF model using llama-cpp-python bindings.
+        """
+        try:
+            from llama_cpp import Llama
+            
+            logger.info(f"Loading model from {self.model_path}")
+            self.model = Llama(
+                model_path=self.model_path,
+                n_threads=self.threads,
+                n_ctx=512,  # Context window
+                verbose=False
+            )
+            logger.info("Model loaded successfully")
+            
+        except ImportError:
+            logger.error(
+                "llama-cpp-python not installed. "
+                "Install with: pip install llama-cpp-python"
+            )
+            raise
+        except Exception as e:
+            logger.error(f"Failed to load model: {e}")
+            raise
+    
+    def generate(self, prompt: str, assessment: Optional['ThreatAssessment'] = None) -> Optional[str]:
+        """
+        Execute inference and return tactical decision.
+        Falls back to rule-based decision if inference fails.
+        
+        Args:
+            prompt: Input prompt for the model
+            assessment: Optional threat assessment for fallback
+            
+        Returns:
+            Generated text or fallback decision
+        """
+        if self.model is None:
+            logger.error("Model not loaded")
+            if self.failsafe_handler and assessment:
+                return self.failsafe_handler.generate_fallback(assessment)
+            return None
+        
+        try:
+            logger.debug(f"Running inference with prompt: {prompt[:100]}...")
+            
+            # Execute inference
+            output = self.model(
+                prompt,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                top_p=0.9,
+                repeat_penalty=1.1,
+                stop=["\n", ".", "!"],  # Stop at sentence end
+                echo=False
+            )
+            
+            # Extract generated text
+            if output and 'choices' in output and len(output['choices']) > 0:
+                text = output['choices'][0]['text'].strip()
+                logger.info(f"Generated decision: {text}")
+                return text
+            else:
+                logger.warning("No output generated from model")
+                if self.failsafe_handler and assessment:
+                    return self.failsafe_handler.generate_fallback(assessment)
+                return None
+                
+        except Exception as e:
+            logger.error(f"Inference failed: {e}")
+            if self.failsafe_handler and assessment:
+                return self.failsafe_handler.generate_fallback(assessment)
+            return None
+    
+    def cleanup(self) -> None:
+        """
+        Release model resources.
+        """
+        if self.model is not None:
+            logger.info("Releasing model resources")
+            del self.model
+            self.model = None
