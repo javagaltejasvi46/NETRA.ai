@@ -2,8 +2,12 @@
 Main entry point for Edge AI Copilot.
 """
 import sys
+import os
 import platform
 from pathlib import Path
+
+# Add parent directory to Python path to allow imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from edge_ai.config import Config
 from edge_ai.orchestrator import EdgeAICopilot
