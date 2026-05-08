@@ -49,13 +49,14 @@ class MQTTSubscriber:
     
     def connect(self) -> None:
         """
-        Establish connection to MQTT broker.
+        Establish connection to MQTT broker with timeout.
         """
         try:
             logger.info(f"Connecting to MQTT broker at {self.broker_host}:{self.broker_port}")
             self.client.connect(self.broker_host, self.broker_port, keepalive=60)
         except Exception as e:
             logger.error(f"Failed to connect to MQTT broker: {e}")
+            logger.error(f"Check that broker at {self.broker_host}:{self.broker_port} is reachable")
             raise
     
     def _on_connect(self, client, userdata, flags, rc) -> None:

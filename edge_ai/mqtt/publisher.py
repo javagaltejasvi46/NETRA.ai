@@ -36,16 +36,18 @@ class MQTTPublisher:
     def connect(self) -> None:
         """
         Establish connection to MQTT broker.
+        Non-fatal — if publisher can't connect, system continues without publishing responses.
         """
         try:
             logger.info(f"Publisher connecting to MQTT broker at {self.broker_host}:{self.broker_port}")
             self.client.connect(self.broker_host, self.broker_port, keepalive=60)
-            self.client.loop_start()  # Start background loop
+            self.client.loop_start()
             self._connected = True
             logger.info("Publisher connected to MQTT broker")
         except Exception as e:
-            logger.error(f"Publisher failed to connect to MQTT broker: {e}")
-            raise
+            logger.warning(f"Publisher failed to connect: {e}")
+            logger.warning("Continuing without MQTT publish — AI decisions will still work locally")
+            self._connected = False  # Don't raise — let system continue
     
     def publish_response(self, decision: str, risk_score: float, 
                         timestamp: int, latency_ms: int = 0) -> bool:
