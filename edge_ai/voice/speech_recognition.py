@@ -65,17 +65,40 @@ class SpeechRecognizer:
             
             logger.info(f"Recording audio for {duration} seconds...")
             
-            # Try to detect audio device automatically
-            device = self._detect_audio_device()
+            # Try PulseAudio first (Bluetooth), fall back to ALSA
+            recorded = False
             
-            # Record using arecord (available on Raspberry Pi)
-            subprocess.run(
-                ['arecord', '-D', device, '-d', str(duration), 
-                 '-f', 'S16_LE', '-r', '16000', '-c', '1', temp_path],
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE
-            )
+            # Method 1: parecord (PulseAudio - works with Bluetooth)
+            try:
+                proc = subprocess.Popen(
+                    ['parecord', '--channels=1', '--rate=16000', '--format=s16le', temp_path],
+                    stderr=subprocess.PIPE
+                )
+                try:
+                    proc.wait(timeout=duration)
+                except subprocess.TimeoutExpired:
+                    proc.terminate()
+                    proc.wait()
+                if os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
+                    recorded = True
+                    logger.info("Recorded via PulseAudio (Bluetooth)")
+            except Exception as e:
+                logger.debug(f"PulseAudio recording failed: {e}")
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+            
+            # Method 2: arecord with timeout (ALSA fallback)
+            if not recorded:
+                device = self._detect_audio_device()
+                subprocess.run(
+                    ['arecord', '-D', device, '-d', str(duration),
+                     '-f', 'S16_LE', '-r', '16000', '-c', '1', temp_path],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE
+                )
             
             logger.info(f"Audio recorded to {temp_path}")
             return temp_path

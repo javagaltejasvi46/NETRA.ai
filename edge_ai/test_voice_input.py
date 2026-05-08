@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Test script for voice input feature.
+Test script for voice input and output features.
 """
 import sys
 import os
+import time
 
-# Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from edge_ai.voice.speech_recognition import SpeechRecognizer
@@ -14,158 +14,178 @@ from edge_ai.ai.conversation_manager import ConversationManager
 from edge_ai.config import Config
 
 
-def test_speech_recognition():
-    """Test speech recognition only."""
-    print("=" * 60)
-    print("Testing Speech Recognition")
-    print("=" * 60)
-    print()
-    
-    try:
-        print("Initializing speech recognizer...")
-        sr = SpeechRecognizer(model_size="base", duration=5)
-        print("✓ Speech recognizer initialized")
-        print()
-        
-        print("Speak now! (5 seconds)")
-        print("-" * 60)
-        text = sr.listen()
-        print("-" * 60)
-        print()
-        
-        if text:
-            print(f"✓ Transcribed: {text}")
-            return True
-        else:
-            print("✗ No speech detected")
-            return False
-            
-    except Exception as e:
-        print(f"✗ Error: {e}")
-        return False
-
-
 def test_tts():
-    """Test text-to-speech."""
-    print()
+    """Test TTS - play a sample message."""
     print("=" * 60)
-    print("Testing Text-to-Speech")
+    print("TEST 1: Text-to-Speech")
     print("=" * 60)
     print()
-    
+
     try:
         print("Initializing TTS engine...")
-        tts = TTSEngine(model_name=Config.TTS_MODEL, timeout=Config.TTS_TIMEOUT)
+        tts = TTSEngine(model_name=Config.TTS_MODEL, timeout=10)
         print("✓ TTS engine initialized")
         print()
-        
-        test_message = "Hello. Welcome to NETRA dot A I."
-        print(f"Speaking: {test_message}")
-        success = tts.speak(test_message)
-        
+
+        msg = "Hello. This is NETRA dot A I. Audio test successful."
+        print(f"Speaking: \"{msg}\"")
+        print(">>> LISTEN TO YOUR HEADPHONES <<<")
+        print()
+
+        success = tts.speak(msg)
+
+        # Wait for audio to finish
+        time.sleep(1)
+
         if success:
-            print("✓ TTS working")
-            return True
+            print("✓ TTS PASSED - Did you hear the message?")
+            return True, tts
         else:
-            print("✗ TTS failed")
-            return False
-            
-    except Exception as e:
-        print(f"✗ Error: {e}")
-        return False
+            print("✗ TTS FAILED")
+            return False, tts
 
-
-def test_conversation():
-    """Test full conversation flow."""
-    print()
-    print("=" * 60)
-    print("Testing Conversation Flow")
-    print("=" * 60)
-    print()
-    
-    try:
-        print("Initializing components...")
-        sr = SpeechRecognizer(model_size="base", duration=5)
-        tts = TTSEngine(model_name=Config.TTS_MODEL, timeout=Config.TTS_TIMEOUT)
-        cm = ConversationManager()
-        print("✓ All components initialized")
-        print()
-        
-        # Welcome message
-        welcome = cm.get_welcome_message()
-        print(f"Welcome: {welcome}")
-        tts.speak(welcome)
-        print()
-        
-        # Listen for question
-        print("Ask a question! (5 seconds)")
-        print("-" * 60)
-        question = sr.listen()
-        print("-" * 60)
-        print()
-        
-        if question:
-            print(f"Question: {question}")
-            
-            # Generate simple response (without LLM for testing)
-            response = f"You asked about {question.split()[0] if question.split() else 'something'}. System ready."
-            print(f"Response: {response}")
-            
-            # Speak response
-            tts.speak(response)
-            print("✓ Conversation flow working")
-            return True
-        else:
-            print("✗ No question detected")
-            return False
-            
     except Exception as e:
-        print(f"✗ Error: {e}")
+        print(f"✗ TTS Error: {e}")
         import traceback
         traceback.print_exc()
+        return False, None
+
+
+def test_speech_recognition():
+    """Test microphone recording and Whisper transcription."""
+    print()
+    print("=" * 60)
+    print("TEST 2: Speech Recognition (Voice-to-Text)")
+    print("=" * 60)
+    print()
+
+    try:
+        print("Initializing speech recognizer...")
+        sr = SpeechRecognizer(model_size=Config.WHISPER_MODEL, duration=Config.LISTENING_DURATION)
+        print("✓ Speech recognizer initialized")
+        print()
+
+        print(">>> SPEAK NOW - You have 5 seconds <<<")
+        print("Say something like: 'Hello NETRA, what is the threat level?'")
+        print("-" * 60)
+
+        text = sr.listen()
+
+        print("-" * 60)
+        print()
+
+        if text and len(text.strip()) > 2:
+            print(f"✓ SPEECH RECOGNITION PASSED")
+            print(f"  You said: \"{text}\"")
+            return True, text
+        else:
+            print("✗ No speech detected or transcription empty")
+            return False, ""
+
+    except Exception as e:
+        print(f"✗ Speech Recognition Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return False, ""
+
+
+def test_full_loop(tts, question):
+    """Test full loop: speak a response to the user's question."""
+    print()
+    print("=" * 60)
+    print("TEST 3: Full Voice Loop (TTS response to your question)")
+    print("=" * 60)
+    print()
+
+    if not tts or not question:
+        print("⊘ Skipped (TTS or speech recognition failed)")
+        return False
+
+    try:
+        cm = ConversationManager()
+
+        # Simple response without LLM
+        words = question.lower().split()
+        if any(w in words for w in ["threat", "enemy", "danger"]):
+            response = "Threat level is critical. Enemy approaching fast."
+        elif any(w in words for w in ["status", "ready", "hello"]):
+            response = "All systems operational. Ready for battle."
+        elif any(w in words for w in ["distance", "far", "close"]):
+            response = "Enemy is approximately 72 meters away."
+        else:
+            response = "Understood. Monitoring battlefield conditions."
+
+        print(f"Your question: \"{question}\"")
+        print(f"Response: \"{response}\"")
+        print()
+        print(">>> LISTEN TO YOUR HEADPHONES <<<")
+
+        success = tts.speak(response)
+        time.sleep(1)
+
+        if success:
+            print("✓ FULL LOOP PASSED")
+            return True
+        else:
+            print("✗ Response playback failed")
+            return False
+
+    except Exception as e:
+        print(f"✗ Full loop error: {e}")
         return False
 
 
 def main():
-    """Run all tests."""
     print()
     print("=" * 60)
-    print("VOICE INPUT FEATURE TEST SUITE")
+    print("NETRA.AI - VOICE FEATURE TEST")
+    print("Device: OnePlus Bullets Wireless Z2")
     print("=" * 60)
     print()
-    
+
     results = {}
-    
-    # Test 1: Speech Recognition
-    results['speech_recognition'] = test_speech_recognition()
-    
-    # Test 2: TTS
-    results['tts'] = test_tts()
-    
-    # Test 3: Full conversation
-    results['conversation'] = test_conversation()
-    
+
+    # Test 1: TTS
+    tts_ok, tts = test_tts()
+    results["TTS (audio output)"] = tts_ok
+
+    # Wait between tests
+    time.sleep(2)
+
+    # Test 2: Speech Recognition
+    sr_ok, question = test_speech_recognition()
+    results["Speech Recognition (mic input)"] = sr_ok
+
+    # Wait between tests
+    time.sleep(1)
+
+    # Test 3: Full loop
+    loop_ok = test_full_loop(tts, question)
+    results["Full Voice Loop"] = loop_ok
+
     # Summary
     print()
     print("=" * 60)
-    print("TEST SUMMARY")
+    print("RESULTS")
     print("=" * 60)
     print()
-    
-    for test_name, passed in results.items():
+    for name, passed in results.items():
         status = "✓ PASS" if passed else "✗ FAIL"
-        print(f"{status} - {test_name}")
-    
+        print(f"  {status}  {name}")
+
     print()
-    
     all_passed = all(results.values())
     if all_passed:
-        print("✓ All tests passed!")
-        return 0
+        print("✓ All voice tests passed! System is ready.")
     else:
-        print("✗ Some tests failed")
-        return 1
+        print("✗ Some tests failed.")
+        if not results.get("TTS (audio output)"):
+            print("  → TTS fix: run ./setup_bluetooth_audio.sh")
+        if not results.get("Speech Recognition (mic input)"):
+            print("  → Mic fix: check parecord works: parecord --channels=1 --rate=16000 --format=s16le test.wav")
+            print("             then Ctrl+C after 3 seconds, play with: paplay test.wav")
+    print()
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
