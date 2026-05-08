@@ -36,6 +36,12 @@ class Config:
     TTS_MODEL: str = "en_US-lessac-medium"
     TTS_TIMEOUT: int = 2
     
+    # Voice Input Settings
+    VOICE_INPUT_ENABLED: bool = True
+    WHISPER_MODEL: str = "base"  # tiny, base, small, medium, large
+    LISTENING_DURATION: int = 5  # seconds
+    ENABLE_WELCOME_MESSAGE: bool = True
+    
     # Logging
     LOG_DIR: str = "logs"
     LOG_RETENTION_DAYS: int = 7

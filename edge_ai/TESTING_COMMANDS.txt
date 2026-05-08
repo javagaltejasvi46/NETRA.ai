@@ -1,0 +1,152 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    TESTING COMMANDS - QUICK REFERENCE                        ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ COMPLETE INSTALLATION & TESTING (Recommended for first time)                │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  chmod +x install_and_test.sh && ./install_and_test.sh
+
+  This will:
+  - Install all core dependencies
+  - Install voice input packages
+  - Download AI model
+  - Run comprehensive tests
+  - Report results
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ RUN TESTS ONLY (If already installed)                                       │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  chmod +x test_all_features.sh && ./test_all_features.sh
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ RUN TESTS WITH AUTO-INSTALL (Install missing packages automatically)        │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ./test_all_features.sh --install
+
+  or
+
+  ./test_all_features.sh -i
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ WHAT GETS TESTED                                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ✓ System dependencies (Python, Mosquitto, audio tools)
+  ✓ Python packages (paho-mqtt, llama-cpp-python, pygame)
+  ✓ Voice packages (whisper, noisereduce, soundfile, piper-tts)
+  ✓ File structure (all required files present)
+  ✓ AI model (tinyllama.gguf exists and valid)
+  ✓ MQTT broker (running and pub/sub working)
+  ✓ Audio devices (input and output)
+  ✓ Python module imports (all modules load correctly)
+  ✓ Telemetry parsing (valid and malformed data)
+  ✓ Threat analysis (distance, risk scores, classifications)
+  ✓ Prompt builder (format and content)
+  ✓ Decision validator (word limits, formatting)
+  ✓ Failsafe handler (rule-based decisions)
+  ✓ Conversation manager (context, welcome message)
+  ✓ TTS engine (text-to-speech output)
+  ✓ Speech recognition (Whisper model loading)
+  ✓ Configuration validation (all settings valid)
+  ✓ Logging system (file creation and rotation)
+  ✓ System resources (memory and disk space)
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ INDIVIDUAL COMPONENT TESTS                                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Test voice input only:
+    python3 test_voice_input.py
+
+  Test microphone:
+    arecord -D plughw:1,0 -d 5 test.wav
+    aplay test.wav
+
+  Test TTS:
+    python3 -c "from edge_ai.voice.tts import TTSEngine; \
+                tts = TTSEngine('en_US-lessac-medium', 2); \
+                tts.speak('Test message')"
+
+  Test Whisper:
+    python3 -c "import whisper; \
+                model = whisper.load_model('base'); \
+                print('Whisper OK')"
+
+  Test MQTT:
+    mosquitto_pub -t test -m "hello"
+    mosquitto_sub -t test -v
+
+  Run unit tests:
+    python3 -m unittest discover edge_ai/tests
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ DIAGNOSTICS                                                                  │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  System diagnostics:
+    ./diagnose.sh
+
+  Check logs:
+    tail -f logs/edge_ai_*.log
+
+  Check test results:
+    cat logs/test_results_*.log
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TROUBLESHOOTING FAILED TESTS                                                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Missing packages:
+    ./test_all_features.sh --install
+
+  Missing model:
+    ./fix_now.sh
+
+  Voice input issues:
+    ./install_voice_input.sh
+
+  MQTT not running:
+    sudo systemctl start mosquitto
+
+  Audio issues:
+    alsamixer          # Adjust volume
+    arecord -l         # List input devices
+    aplay -l           # List output devices
+
+  Full troubleshooting:
+    cat TROUBLESHOOTING.md
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TEST OUTPUT INTERPRETATION                                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ✓ Green = Test passed
+  ✗ Red = Test failed (needs fixing)
+  ⊘ Yellow = Test skipped (optional feature)
+
+  Success Rate: Shows percentage of passed tests
+  Log file: Detailed results saved for review
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ AFTER TESTS PASS                                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Start the system:
+    ./START_HERE.sh
+
+  Or run as service:
+    sudo systemctl start edge-ai-copilot
+
+  Send test telemetry:
+    mosquitto_pub -t 'battlefield/sensor' -m '{"timestamp":1710000000,"soldier":{"x":120,"y":340,"heart_rate":125},"enemy":{"x":180,"y":360},"hostage":{"x":140,"y":350},"environment":"urban","threat_level":"high"}'
+
+  Monitor responses:
+    mosquitto_sub -t 'battlefield/ai-response' -v
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║ For detailed testing guide, see: TESTING_GUIDE.md                           ║
+╚══════════════════════════════════════════════════════════════════════════════╝
