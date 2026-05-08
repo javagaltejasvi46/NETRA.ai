@@ -10,7 +10,9 @@ class Config:
     """Centralized configuration for Edge AI Copilot"""
     
     # MQTT Settings
-    MQTT_BROKER_HOST: str = "localhost"
+    # Broker is running on the sender machine: 172.17.55.214
+    # Pi (this machine) IP: 172.17.4.43
+    MQTT_BROKER_HOST: str = "172.17.55.214"  # Sender's MQTT broker
     MQTT_BROKER_PORT: int = 1883
     MQTT_TOPIC_SENSOR: str = "battlefield/sensor"
     MQTT_TOPIC_RESPONSE: str = "battlefield/ai-response"
