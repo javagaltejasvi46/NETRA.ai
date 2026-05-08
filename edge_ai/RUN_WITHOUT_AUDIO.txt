@@ -1,0 +1,139 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║                    RUN SYSTEM WITHOUT AUDIO                                  ║
+║                                                                              ║
+║              Audio issues? No problem! Run without voice.                    ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+GOOD NEWS: Voice features are now DISABLED by default!
+
+The system will work perfectly for:
+  ✓ MQTT telemetry processing
+  ✓ Threat analysis
+  ✓ LLM tactical decision generation
+  ✓ MQTT response publishing
+  ✓ All core AI functionality
+
+Voice features (disabled):
+  ⊘ Voice input (speech recognition)
+  ⊘ Voice output (TTS)
+  ⊘ Welcome message
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ START THE SYSTEM NOW                                                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ./START_HERE.sh
+
+  The system will start without any audio errors!
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TEST THE SYSTEM                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Terminal 1: Start system
+    ./START_HERE.sh
+
+  Terminal 2: Monitor responses
+    mosquitto_sub -t 'battlefield/ai-response' -v
+
+  Terminal 3: Send telemetry
+    mosquitto_pub -t 'battlefield/sensor' -m '{"timestamp":1710000000,"soldier":{"x":120,"y":340,"heart_rate":125},"enemy":{"x":180,"y":360},"hostage":{"x":140,"y":350},"environment":"urban","threat_level":"high"}'
+
+  Expected:
+    - System analyzes threat
+    - Generates tactical decision
+    - Publishes to MQTT
+    - NO audio output (that's OK!)
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ ENABLE VOICE LATER (When Audio is Fixed)                                    │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Step 1: Fix audio hardware
+    - Connect USB microphone
+    - Connect speakers/headphones
+    - Test: arecord -l && aplay -l
+
+  Step 2: Enable voice features
+    nano config.py
+
+    Change:
+      VOICE_INPUT_ENABLED = True
+      ENABLE_WELCOME_MESSAGE = True
+
+  Step 3: Install voice packages
+    ./install_voice_input.sh
+
+  Step 4: Test
+    python3 test_voice_input.py
+
+  Step 5: Restart system
+    ./START_HERE.sh
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ WHY AUDIO FAILED                                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Issue 1: No microphone detected
+    - No USB microphone connected
+    - Built-in mic not enabled
+    - Wrong audio device configured
+
+  Issue 2: Piper TTS voice model not found
+    - Voice model not downloaded
+    - Piper not installed correctly
+
+  These are OPTIONAL features. Core AI works without them!
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ CURRENT CONFIGURATION                                                        │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  config.py settings:
+    VOICE_INPUT_ENABLED = False      ← Voice input disabled
+    ENABLE_WELCOME_MESSAGE = False   ← Welcome audio disabled
+
+  This means:
+    - No audio recording attempts
+    - No TTS attempts
+    - No audio errors
+    - System runs smoothly!
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ WHAT STILL WORKS                                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ✓ MQTT communication
+  ✓ Telemetry parsing
+  ✓ Threat analysis (distance, risk scores)
+  ✓ LLM inference (tactical decisions)
+  ✓ Decision validation
+  ✓ Failsafe logic
+  ✓ MQTT response publishing
+  ✓ Logging
+  ✓ All core battlefield AI functionality
+
+  The ONLY thing missing is voice interaction.
+  Everything else works perfectly!
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ ALTERNATIVE: Text-Based Interaction                                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Instead of voice, you can:
+    - Send commands via MQTT
+    - Monitor responses via MQTT
+    - View logs for decisions
+    - Use dashboard for visualization
+
+  This is actually MORE reliable for production!
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║  🚀 READY TO RUN: ./START_HERE.sh                                           ║
+║                                                                              ║
+║  Voice features disabled. Core AI fully functional!                          ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝

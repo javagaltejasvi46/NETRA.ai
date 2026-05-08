@@ -37,10 +37,10 @@ class Config:
     TTS_TIMEOUT: int = 2
     
     # Voice Input Settings
-    VOICE_INPUT_ENABLED: bool = True
+    VOICE_INPUT_ENABLED: bool = False  # Disabled until audio is configured
     WHISPER_MODEL: str = "base"  # tiny, base, small, medium, large
     LISTENING_DURATION: int = 5  # seconds
-    ENABLE_WELCOME_MESSAGE: bool = True
+    ENABLE_WELCOME_MESSAGE: bool = False  # Disabled until audio is configured
     
     # Logging
     LOG_DIR: str = "logs"
