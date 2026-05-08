@@ -17,6 +17,7 @@ from edge_ai.ai.inference import InferenceEngine
 from edge_ai.ai.failsafe import FailsafeHandler
 from edge_ai.ai.decision_validator import TacticalDecisionGenerator
 from edge_ai.ai.conversation_manager import ConversationManager
+from edge_ai.ai.telemetry_store import TelemetryStore
 from edge_ai.voice.tts import TTSEngine
 from edge_ai.voice.speech_recognition import SpeechRecognizer
 from edge_ai.utils.helpers import log_telemetry, log_decision, log_error
@@ -77,6 +78,10 @@ class EdgeAICopilot:
             # Conversation manager
             self.conversation_manager = ConversationManager()
             logger.info("✓ Conversation manager initialized")
+
+            # Telemetry store (persists all payloads + feeds LLM context)
+            self.telemetry_store = TelemetryStore(max_memory=20)
+            logger.info("✓ Telemetry store initialized")
             
             # TTS engine
             self.tts_engine = TTSEngine(
@@ -142,26 +147,51 @@ class EdgeAICopilot:
         try:
             # Log telemetry
             log_telemetry(logger, telemetry)
-            
+
+            # ── CONSOLE DISPLAY ──────────────────────────────────────────
+            print("\n" + "="*60)
+            print("📡 TELEMETRY RECEIVED")
+            print("="*60)
+            print(f"  Timestamp  : {telemetry.timestamp}")
+            print(f"  Soldier    : pos=({telemetry.soldier['x']}, {telemetry.soldier['y']})  HR={telemetry.soldier['heart_rate']} bpm")
+            print(f"  Enemy      : pos=({telemetry.enemy['x']}, {telemetry.enemy['y']})  dist={telemetry.enemy.get('distance', 'N/A')}m")
+            print(f"  Hostage    : pos=({telemetry.hostage['x']}, {telemetry.hostage['y']})")
+            print(f"  Environment: {telemetry.environment}")
+            print("-"*60)
+            # ─────────────────────────────────────────────────────────────
+
             # Step 1: Analyze threat
             assessment = self.threat_analyzer.analyze(telemetry)
-            
+
+            # ── CONSOLE DISPLAY ──────────────────────────────────────────
+            print(f"🔍 THREAT ANALYSIS")
+            print(f"  Distance   : {assessment.enemy_distance:.1f}m")
+            print(f"  Threat     : {assessment.threat_level}")
+            print(f"  Risk Score : {assessment.risk_score:.2f}")
+            print(f"  Stress     : {assessment.soldier_stress}")
+            print(f"  Hostage    : {assessment.hostage_risk}")
+            print("-"*60)
+            # ─────────────────────────────────────────────────────────────
+
             # Store context for conversation
             self.conversation_manager.add_telemetry(telemetry, assessment)
-            
+
+            # Persist payload + assessment to disk and memory store
+            self.telemetry_store.save(telemetry, assessment)
+
             # Step 2: Build prompt
             prompt = self.prompt_builder.build_prompt(telemetry, assessment)
-            
+
             # Step 3: Generate decision (with automatic fallback)
             raw_decision = self.inference_engine.generate(prompt, assessment)
-            
+
             if not raw_decision:
                 logger.error("Failed to generate decision")
                 return
-            
+
             # Step 4: Validate and format decision
             decision = self.decision_validator.validate_decision(raw_decision)
-            
+
             if not decision:
                 logger.error("Decision validation failed")
                 return
@@ -171,7 +201,14 @@ class EdgeAICopilot:
             
             # Step 5: Log decision
             log_decision(logger, decision, assessment.risk_score, latency_ms)
-            
+
+            # ── CONSOLE DISPLAY ──────────────────────────────────────────
+            print(f"🤖 LLM DECISION")
+            print(f"  Decision   : {decision}")
+            print(f"  Latency    : {latency_ms}ms")
+            print("="*60 + "\n")
+            # ─────────────────────────────────────────────────────────────
+
             # Store decision in conversation context
             self.conversation_manager.add_decision(decision)
             
@@ -217,15 +254,18 @@ class EdgeAICopilot:
                 return
             
             logger.info(f"User asked: {user_input}")
-            
-            # Generate response using conversation manager
+            print(f"\n🎤 USER: {user_input}")
+
+            # Generate response using conversation manager with full telemetry context
             response = self.conversation_manager.generate_response(
                 user_input,
-                self.inference_engine
+                self.inference_engine,
+                telemetry_store=self.telemetry_store
             )
-            
+
             # Speak response
             if response:
+                print(f"🔊 NETRA: {response}\n")
                 logger.info(f"Responding: {response}")
                 self.tts_engine.speak(response)
             

@@ -66,83 +66,65 @@ class ConversationManager:
             'assistant': response
         })
     
-    def build_context_prompt(self, user_question: str) -> str:
+    def build_context_prompt(self, user_question: str, telemetry_store=None) -> str:
         """
         Build prompt with conversation context for LLM.
-        
-        Args:
-            user_question: User's current question
-            
-        Returns:
-            Formatted prompt with context
+        Includes full telemetry history from TelemetryStore if provided.
         """
         prompt_parts = [
             "You are NETRA.AI, a battlefield tactical AI assistant.",
             "Answer questions briefly in under 20 words.",
             "Be direct and tactical."
         ]
-        
-        # Add recent telemetry context
-        if self.telemetry_history:
+
+        # Inject full telemetry history from store
+        if telemetry_store is not None:
+            summary = telemetry_store.get_context_summary(last_n=5)
+            prompt_parts.append(f"\n{summary}")
+        elif self.telemetry_history:
             latest = self.telemetry_history[-1]
             prompt_parts.append(
                 f"\nCurrent situation: Enemy {latest['enemy_distance']:.0f}m away, "
                 f"threat level {latest['threat_level']}, "
                 f"soldier heart rate {latest['heart_rate']} bpm."
             )
-        
+
         # Add recent decision
         if self.decision_history:
             prompt_parts.append(f"Last decision: {self.decision_history[-1]}")
-        
+
         # Add conversation history (last 3 exchanges)
         if self.conversation_history:
             prompt_parts.append("\nRecent conversation:")
             for exchange in list(self.conversation_history)[-3:]:
                 prompt_parts.append(f"User: {exchange['user']}")
                 prompt_parts.append(f"Assistant: {exchange['assistant']}")
-        
-        # Add current question
+
         prompt_parts.append(f"\nUser: {user_question}")
         prompt_parts.append("Assistant:")
-        
+
         return "\n".join(prompt_parts)
-    
-    def generate_response(self, user_question: str, inference_engine) -> str:
-        """
-        Generate response to user question using LLM.
-        
-        Args:
-            user_question: User's question
-            inference_engine: InferenceEngine instance
-            
-        Returns:
-            Generated response (max 20 words)
-        """
+
+    def generate_response(self, user_question: str, inference_engine,
+                          telemetry_store=None) -> str:
+        """Generate response using LLM with full telemetry context."""
         try:
-            # Build prompt with context
-            prompt = self.build_context_prompt(user_question)
-            
+            prompt = self.build_context_prompt(user_question, telemetry_store)
             logger.debug(f"Conversation prompt: {prompt[:200]}...")
-            
-            # Generate response using inference engine
+
             response = inference_engine.generate(prompt, assessment=None)
-            
+
             if not response:
                 response = "I cannot answer that right now."
-            
-            # Ensure response is under 20 words
+
             words = response.split()
             if len(words) > 20:
                 response = ' '.join(words[:20]) + '.'
-            
-            # Store exchange
+
             self.add_exchange(user_question, response)
-            
             logger.info(f"Q: {user_question} | A: {response}")
-            
             return response
-            
+
         except Exception as e:
             logger.error(f"Response generation failed: {e}")
             return "Error processing your question."

@@ -71,10 +71,13 @@ class ThreatAnalyzer:
         hostage_x = telemetry.hostage['x']
         hostage_y = telemetry.hostage['y']
         
-        # Compute enemy distance from soldier using Euclidean distance
-        enemy_distance = self._calculate_distance(
-            soldier_x, soldier_y, enemy_x, enemy_y
-        )
+        # Compute enemy distance - use pre-computed if available, else Euclidean
+        if 'distance' in telemetry.enemy and telemetry.enemy['distance'] is not None:
+            enemy_distance = float(telemetry.enemy['distance'])
+        else:
+            enemy_distance = self._calculate_distance(
+                soldier_x, soldier_y, enemy_x, enemy_y
+            )
         
         # Compute hostage distance from enemy
         hostage_enemy_distance = self._calculate_distance(
