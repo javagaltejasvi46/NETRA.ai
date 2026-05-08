@@ -65,13 +65,16 @@ class SpeechRecognizer:
             
             logger.info(f"Recording audio for {duration} seconds...")
             
+            # Try to detect audio device automatically
+            device = self._detect_audio_device()
+            
             # Record using arecord (available on Raspberry Pi)
             subprocess.run(
-                ['arecord', '-D', 'plughw:1,0', '-d', str(duration), 
+                ['arecord', '-D', device, '-d', str(duration), 
                  '-f', 'S16_LE', '-r', '16000', '-c', '1', temp_path],
                 check=True,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.PIPE
             )
             
             logger.info(f"Audio recorded to {temp_path}")
@@ -81,11 +84,49 @@ class SpeechRecognizer:
             logger.error("arecord not found. Install with: sudo apt-get install alsa-utils")
             raise
         except subprocess.CalledProcessError as e:
-            logger.error(f"Recording failed: {e}")
+            logger.error(f"Recording failed: {e.stderr.decode() if e.stderr else e}")
+            logger.error("Try: ./fix_audio_issues.sh to configure audio")
             raise
         except Exception as e:
             logger.error(f"Audio recording error: {e}")
             raise
+    
+    def _detect_audio_device(self) -> str:
+        """
+        Automatically detect the correct audio input device.
+        
+        Returns:
+            Device string (e.g., 'plughw:1,0')
+        """
+        try:
+            # Try to get device list
+            result = subprocess.run(
+                ['arecord', '-l'],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            # Parse output to find first available device
+            for line in result.stdout.split('\n'):
+                if 'card' in line.lower():
+                    # Extract card and device numbers
+                    import re
+                    match = re.search(r'card (\d+).*device (\d+)', line)
+                    if match:
+                        card = match.group(1)
+                        device = match.group(2)
+                        device_string = f'plughw:{card},{device}'
+                        logger.info(f"Detected audio device: {device_string}")
+                        return device_string
+            
+            # Fallback to default
+            logger.warning("Could not detect audio device, using default: plughw:1,0")
+            return 'plughw:1,0'
+            
+        except Exception as e:
+            logger.warning(f"Device detection failed: {e}, using default: plughw:1,0")
+            return 'plughw:1,0'
     
     def denoise_audio(self, audio_path: str) -> str:
         """

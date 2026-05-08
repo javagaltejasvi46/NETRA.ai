@@ -1,0 +1,118 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║                    AUDIO ISSUES - QUICK FIX GUIDE                            ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+YOUR ISSUES:
+  ✗ Recording failed (arecord error)
+  ✗ Welcome audio not playing
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ QUICK FIX (Run This First)                                                  │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  chmod +x fix_audio_issues.sh && ./fix_audio_issues.sh
+
+  This will:
+    - Detect your audio devices automatically
+    - Update configuration
+    - Test recording and playback
+    - Fix the welcome audio
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ IF THAT DOESN'T WORK                                                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  STEP 1: Find your audio device
+    arecord -l
+
+  Output example:
+    card 1: Device [USB Audio Device], device 0: USB Audio
+    
+  Your device is: plughw:1,0 (card 1, device 0)
+
+  ────────────────────────────────────────────────────────────────────────────
+
+  STEP 2: Test recording with YOUR device
+    arecord -D plughw:1,0 -d 5 test.wav
+    aplay test.wav
+
+  (Replace plughw:1,0 with your device from step 1)
+
+  ────────────────────────────────────────────────────────────────────────────
+
+  STEP 3: If no devices found
+    - Connect USB microphone
+    - Check USB: lsusb
+    - Enable audio: sudo raspi-config → Interface Options → Audio
+    - Reboot: sudo reboot
+
+  ────────────────────────────────────────────────────────────────────────────
+
+  STEP 4: Fix welcome audio
+    chmod +x fix_welcome_audio.sh && ./fix_welcome_audio.sh
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ COMMON SOLUTIONS                                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  No microphone detected:
+    sudo apt-get install alsa-utils
+    sudo usermod -a -G audio $USER
+    sudo reboot
+
+  No audio output:
+    aplay -l                    # List speakers
+    alsamixer                   # Adjust volume
+    speaker-test -t wav -c 2    # Test speakers
+
+  Piper TTS not working:
+    pip3 install piper-tts
+    echo "test" | piper --model en_US-lessac-medium --output_file test.wav
+    aplay test.wav
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TEMPORARY WORKAROUND                                                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Disable voice features while fixing audio:
+
+    nano config.py
+
+  Change these lines:
+    VOICE_INPUT_ENABLED = False
+    ENABLE_WELCOME_MESSAGE = False
+
+  Then start system:
+    ./START_HERE.sh
+
+  (System will work without voice features)
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ DETAILED GUIDE                                                               │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  cat AUDIO_TROUBLESHOOTING.md
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ QUICK TESTS                                                                  │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Test microphone:
+    arecord -D plughw:1,0 -d 5 test.wav && aplay test.wav
+
+  Test speakers:
+    speaker-test -t wav -c 2
+
+  Test TTS:
+    python3 test_voice_input.py
+
+  Check devices:
+    arecord -l    # Input devices
+    aplay -l      # Output devices
+    lsusb         # USB devices
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║ Start here: ./fix_audio_issues.sh                                           ║
+╚══════════════════════════════════════════════════════════════════════════════╝

@@ -47,6 +47,7 @@ class TTSEngine:
             temp_file = self._generate_audio(text)
             
             if temp_file is None:
+                logger.warning("TTS generation failed, skipping audio output")
                 return False
             
             # Play audio
@@ -57,6 +58,7 @@ class TTSEngine:
             
         except Exception as e:
             logger.error(f"TTS failed: {e}")
+            logger.warning("Continuing without audio output")
             return False
             
         finally:
