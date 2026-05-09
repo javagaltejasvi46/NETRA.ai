@@ -34,9 +34,9 @@ class Enemy:
 class Hostage:
     """Represents hostage position"""
     callsign: str
-    status: str
     lat: float
     lng: float
+    status: str = "unknown"  # Optional, defaults to unknown
 
 
 @dataclass
@@ -135,9 +135,9 @@ class TelemetryData:
             try:
                 hostage = Hostage(
                     callsign=data['hostage']['callsign'],
-                    status=data['hostage']['status'],
                     lat=float(data['hostage']['lat']),
-                    lng=float(data['hostage']['lng'])
+                    lng=float(data['hostage']['lng']),
+                    status=data['hostage'].get('status', 'unknown')  # Optional
                 )
             except (KeyError, ValueError) as e:
                 logger.error(f"Invalid hostage data: {e}")

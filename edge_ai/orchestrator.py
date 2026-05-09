@@ -134,7 +134,7 @@ class EdgeAICopilot:
                 print(f"    {status_icon} {soldier.callsign}: HR={soldier.heart_rate}bpm, Battery={soldier.battery}%, Status={soldier.status}")
             
             print(f"  Enemy       : {telemetry.enemy.callsign} at ({telemetry.enemy.lat:.4f}, {telemetry.enemy.lng:.4f})")
-            print(f"  Hostage     : {telemetry.hostage.callsign} ({telemetry.hostage.status}) at ({telemetry.hostage.lat:.4f}, {telemetry.hostage.lng:.4f})")
+            print(f"  Hostage     : {telemetry.hostage.callsign} at ({telemetry.hostage.lat:.4f}, {telemetry.hostage.lng:.4f})")
             print("-"*70)
 
             # Step 1: Analyze threat

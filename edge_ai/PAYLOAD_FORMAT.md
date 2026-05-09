@@ -37,7 +37,6 @@
   },
   "hostage": {
     "callsign": "HOSTAGE",
-    "status": "unknown",
     "lat": 12.9796,
     "lng": 77.5928
   }
@@ -72,7 +71,6 @@
 
 #### Hostage Object
 - **`callsign`** (string, required): Hostage identifier
-- **`status`** (string, required): Hostage status (e.g., "unknown", "secured", "danger")
 - **`lat`** (float, required): Latitude (GPS coordinate)
 - **`lng`** (float, required): Longitude (GPS coordinate)
 
@@ -141,7 +139,6 @@ mosquitto_pub -t "battlefield/sensor" -m '{
   },
   "hostage": {
     "callsign": "HOSTAGE",
-    "status": "unknown",
     "lat": 12.9796,
     "lng": 77.5928
   }

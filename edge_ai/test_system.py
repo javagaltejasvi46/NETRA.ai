@@ -220,7 +220,6 @@ def test_threat_analysis():
             },
             "hostage": {
                 "callsign": "HOSTAGE",
-                "status": "unknown",
                 "lat": 12.9796,
                 "lng": 77.5928
             }

@@ -153,7 +153,6 @@ HOSTAGE_RISK_DISTANCE = 50   # Hostage proximity for ELEVATED risk (meters)
   },
   "hostage": {
     "callsign": "HOSTAGE",
-    "status": "unknown",
     "lat": 12.9796,
     "lng": 77.5928
   }
@@ -219,7 +218,6 @@ mosquitto_pub -t "battlefield/sensor" -m '{
   },
   "hostage": {
     "callsign": "HOSTAGE",
-    "status": "unknown",
     "lat": 12.9796,
     "lng": 77.5928
   }
