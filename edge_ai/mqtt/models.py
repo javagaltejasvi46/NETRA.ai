@@ -4,7 +4,7 @@ Data models for telemetry parsing and validation.
 import json
 import logging
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, List
 
 logger = logging.getLogger(__name__)
@@ -93,10 +93,10 @@ class TelemetryData:
     squad: List[SquadMember]
     enemy: Enemy
     hostage: Hostage
-    voice_message: Optional[VoiceMessage] = None
+    voice_message: Optional[VoiceMessage] = field(default=None)
     
     # Computed fields for backward compatibility
-    soldier: dict = None  # Primary soldier (first squad member)
+    soldier: dict = field(default=None)  # Primary soldier (first squad member)
     environment: str = "urban"
     threat_level: str = "unknown"
 
@@ -161,16 +161,21 @@ class TelemetryData:
 
             # Parse voice message (optional)
             voice_message = None
-            if 'voiceMessage' in data:
+            if 'voiceMessage' in data and data['voiceMessage'] is not None:
                 try:
-                    voice_message = VoiceMessage(
-                        unit=data['voiceMessage']['unit'],
-                        message=data['voiceMessage']['message'],
-                        timestamp=int(data['voiceMessage']['timestamp']),
-                        source=data['voiceMessage']['source']
-                    )
-                    logger.info(f"Voice message from {voice_message.unit}: {voice_message.message}")
-                except (KeyError, ValueError) as e:
+                    vm_data = data['voiceMessage']
+                    # Validate all required fields exist
+                    if all(key in vm_data for key in ['unit', 'message', 'timestamp', 'source']):
+                        voice_message = VoiceMessage(
+                            unit=vm_data['unit'],
+                            message=vm_data['message'],
+                            timestamp=int(vm_data['timestamp']),
+                            source=vm_data['source']
+                        )
+                        logger.info(f"Voice message from {voice_message.unit}: {voice_message.message}")
+                    else:
+                        logger.warning("Voice message missing required fields, ignoring")
+                except (KeyError, ValueError, TypeError) as e:
                     logger.warning(f"Invalid voice message data: {e}")
                     # Continue without voice message
 
