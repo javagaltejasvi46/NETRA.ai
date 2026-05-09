@@ -368,3 +368,9 @@ All voice features have been removed, the codebase has been cleaned and simplifi
 **Ready to deploy!** 🚀
 
 Run: `./setup_and_run.sh`
+now u have to change the logic of giving result it should not only display the result but should also send it back to the mqtt broker as a pay load as response in miimum number of words 
+
+also tioler the llama.cpp to get correct out put it should have the context of the previous movements 
+
+
+

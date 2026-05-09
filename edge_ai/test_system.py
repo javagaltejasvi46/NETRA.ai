@@ -4,8 +4,12 @@ Standalone system test script for Edge AI Copilot.
 Tests all components independently.
 """
 import sys
+import os
 import time
 import json
+
+# Add parent directory to Python path to allow imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def print_header(text):
     print("\n" + "="*70)
@@ -47,7 +51,6 @@ def test_config():
     print_header("TEST 2: Configuration")
     
     try:
-        sys.path.insert(0, '.')
         from edge_ai.config import Config
         
         print_info(f"MQTT Broker: {Config.MQTT_BROKER_HOST}:{Config.MQTT_BROKER_PORT}")
