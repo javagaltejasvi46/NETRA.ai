@@ -16,7 +16,7 @@ class MQTTSubscriber:
     """
     
     def __init__(self, broker_host: str, broker_port: int, topic: str, 
-                 qos: int, on_message_callback: Callable[[TelemetryData], None],
+                 qos: int, on_message_callback: Callable[[TelemetryData, str], None],
                  reconnect_delay: int = 5, max_reconnect_delay: int = 60):
         """
         Initialize MQTT subscriber.
@@ -26,7 +26,7 @@ class MQTTSubscriber:
             broker_port: MQTT broker port
             topic: Topic to subscribe to
             qos: Quality of Service level (0, 1, or 2)
-            on_message_callback: Callback function to invoke with parsed telemetry
+            on_message_callback: Callback function to invoke with parsed telemetry and raw payload
             reconnect_delay: Initial reconnection delay in seconds
             max_reconnect_delay: Maximum reconnection delay in seconds
         """
@@ -140,8 +140,8 @@ class MQTTSubscriber:
                 logger.warning("Failed to parse telemetry, skipping message")
                 return
             
-            # Invoke callback with parsed telemetry
-            self.on_message_callback(telemetry)
+            # Invoke callback with parsed telemetry AND raw payload
+            self.on_message_callback(telemetry, payload)
             
         except Exception as e:
             logger.error(f"Error processing message: {e}")

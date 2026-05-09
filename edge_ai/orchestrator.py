@@ -109,13 +109,14 @@ class EdgeAICopilot:
             logger.error(f"Initialization failed: {e}")
             raise
     
-    def process_telemetry(self, telemetry: TelemetryData) -> None:
+    def process_telemetry(self, telemetry: TelemetryData, raw_payload: str) -> None:
         """
         Main processing pipeline.
         Guaranteed to send a response.
         
         Args:
             telemetry: Incoming telemetry data
+            raw_payload: Raw JSON payload string
         """
         start_time = time.time()
         response_sent = False
@@ -125,6 +126,12 @@ class EdgeAICopilot:
         print("="*80)
         
         try:
+            # Display RAW JSON payload first
+            print("📥 RAW PAYLOAD:")
+            print(raw_payload)
+            print()
+            print("-"*80)
+            
             # Display received data with complete formatting
             print(f"📊 TELEMETRY DATA")
             print(f"Tick      : {telemetry.tick}")
@@ -227,36 +234,32 @@ class EdgeAICopilot:
             print(f"Latency  : {latency_ms}ms")
             print("-"*80)
             
-            # Step 5: Send response via MQTT
-            print("📤 Sending response to broker...")
-            
-            # Prepare voice message context if present
-            replying_to_unit = None
-            replying_to_message = None
-            original_timestamp = None
-            
-            if telemetry.voice_message:
+            # Step 5: Send response via MQTT ONLY if there's a voice message
+            if telemetry.voice_message and telemetry.voice_message.message:
+                print("📤 Sending response to broker...")
+                
+                # Prepare voice message context
                 replying_to_unit = telemetry.voice_message.unit
                 replying_to_message = telemetry.voice_message.message
                 original_timestamp = telemetry.voice_message.timestamp
-            
-            self.mqtt_publisher.publish_response(
-                decision=decision,
-                risk_score=assessment.risk_score,
-                timestamp=telemetry.timestamp,
-                latency_ms=latency_ms,
-                replying_to_unit=replying_to_unit,
-                replying_to_message=replying_to_message,
-                original_timestamp=original_timestamp,
-                threat_level=assessment.threat_level
-            )
-            response_sent = True
-            print("✅ Response sent successfully")
-            
-            # Display response details
-            if replying_to_unit:
+                
+                self.mqtt_publisher.publish_response(
+                    decision=decision,
+                    risk_score=assessment.risk_score,
+                    timestamp=telemetry.timestamp,
+                    latency_ms=latency_ms,
+                    replying_to_unit=replying_to_unit,
+                    replying_to_message=replying_to_message,
+                    original_timestamp=original_timestamp,
+                    threat_level=assessment.threat_level
+                )
+                response_sent = True
+                print("✅ Response sent successfully")
                 print(f"   Replying to: {replying_to_unit}")
                 print(f"   Original msg: \"{replying_to_message}\"")
+            else:
+                print("ℹ️  No voice message - response not sent to broker")
+                logger.info("No voice message present, skipping MQTT response")
             
             print("="*80 + "\n")
             
@@ -279,24 +282,19 @@ class EdgeAICopilot:
             print(f"❌ Error: {e}")
             print("-"*80)
             
-            # Always send acknowledgment if we haven't sent response yet
-            if not response_sent:
+            # Send acknowledgment ONLY if there was a voice message and we haven't sent response yet
+            if not response_sent and telemetry.voice_message and telemetry.voice_message.message:
                 try:
                     latency_ms = int((time.time() - start_time) * 1000)
-                    print("📤 Sending acknowledgment...")
+                    print("📤 Sending error acknowledgment...")
                     
-                    # Prepare voice message context if present
-                    replying_to_unit = None
-                    replying_to_message = None
-                    original_timestamp = None
-                    
-                    if telemetry.voice_message:
-                        replying_to_unit = telemetry.voice_message.unit
-                        replying_to_message = telemetry.voice_message.message
-                        original_timestamp = telemetry.voice_message.timestamp
+                    # Prepare voice message context
+                    replying_to_unit = telemetry.voice_message.unit
+                    replying_to_message = telemetry.voice_message.message
+                    original_timestamp = telemetry.voice_message.timestamp
                     
                     self.mqtt_publisher.publish_response(
-                        decision="OK, I received your message.",
+                        decision=f"Roger {replying_to_unit}, message received but encountered an error.",
                         risk_score=0.0,
                         timestamp=telemetry.timestamp,
                         latency_ms=latency_ms,
@@ -305,12 +303,15 @@ class EdgeAICopilot:
                         original_timestamp=original_timestamp,
                         threat_level="unknown"
                     )
-                    print("✅ Acknowledgment sent")
+                    print("✅ Error acknowledgment sent")
                     print("="*80 + "\n")
                 except Exception as e2:
                     logger.error(f"Failed to send acknowledgment: {e2}")
                     print(f"❌ Failed to send acknowledgment: {e2}")
                     print("="*80 + "\n")
+            elif not response_sent:
+                print("ℹ️  No voice message - error acknowledgment not sent")
+                print("="*80 + "\n")
     
     def start(self) -> None:
         """Start the Edge AI Copilot system."""
