@@ -206,6 +206,87 @@ install_llama_cpp_python() {
         fi
     fi
     
+    # Check for externally-managed-environment
+    print_warning "Detected externally-managed Python environment"
+    echo ""
+    echo "Choose installation method:"
+    echo "  1) Virtual environment (recommended, safe)"
+    echo "  2) System-wide with --break-system-packages (simpler, but risky)"
+    echo ""
+    read -p "Enter choice (1 or 2): " choice
+    
+    if [ "$choice" = "1" ]; then
+        install_with_venv
+    elif [ "$choice" = "2" ]; then
+        install_system_wide
+    else
+        print_error "Invalid choice"
+        return 1
+    fi
+}
+
+install_with_venv() {
+    print_info "Installing in virtual environment..."
+    
+    # Install venv if needed
+    if ! python3 -m venv --help &>/dev/null; then
+        print_info "Installing python3-venv..."
+        sudo apt-get update
+        sudo apt-get install -y python3-venv
+    fi
+    
+    # Create venv if it doesn't exist
+    if [ ! -d "venv" ]; then
+        print_info "Creating virtual environment..."
+        python3 -m venv venv
+    fi
+    
+    # Activate venv
+    print_info "Activating virtual environment..."
+    source venv/bin/activate
+    
+    # Install build dependencies
+    print_info "Installing build dependencies..."
+    sudo apt-get update
+    sudo apt-get install -y build-essential cmake libopenblas-dev
+    
+    # Upgrade pip
+    pip install --upgrade pip
+    
+    # Install llama-cpp-python
+    if [ $IS_RPI -eq 1 ]; then
+        print_info "Building with OpenBLAS optimization (this may take 10-15 minutes)..."
+        CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" pip install llama-cpp-python --no-cache-dir
+    else
+        print_info "Installing llama-cpp-python..."
+        pip install llama-cpp-python
+    fi
+    
+    # Verify installation
+    if python3 -c "import llama_cpp" 2>/dev/null; then
+        echo ""
+        print_success "llama-cpp-python installed successfully in virtual environment"
+        print_info "Virtual environment created at: venv/"
+        print_warning "Remember to activate it before running: source venv/bin/activate"
+        return 0
+    else
+        echo ""
+        print_error "Failed to install llama-cpp-python"
+        return 1
+    fi
+}
+
+install_system_wide() {
+    print_warning "Installing system-wide with --break-system-packages"
+    print_warning "This may interfere with system package management"
+    echo ""
+    read -p "Continue? (yes/no): " confirm
+    
+    if [ "$confirm" != "yes" ]; then
+        print_info "Installation cancelled"
+        return 1
+    fi
+    
     # Install build dependencies
     print_info "Installing build dependencies..."
     sudo apt-get update
@@ -214,22 +295,22 @@ install_llama_cpp_python() {
     # Install llama-cpp-python
     if [ $IS_RPI -eq 1 ]; then
         print_info "Building with OpenBLAS optimization (this may take 10-15 minutes)..."
-        CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" pip3 install llama-cpp-python --no-cache-dir
+        CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" pip3 install llama-cpp-python --no-cache-dir --break-system-packages
     else
         print_info "Installing llama-cpp-python..."
-        pip3 install llama-cpp-python
+        pip3 install llama-cpp-python --break-system-packages
     fi
     
     # Verify installation
     if python3 -c "import llama_cpp" 2>/dev/null; then
         echo ""
-        print_success "llama-cpp-python installed successfully"
+        print_success "llama-cpp-python installed successfully system-wide"
         return 0
     else
         echo ""
         print_error "Failed to install llama-cpp-python"
         print_info "Try manual installation:"
-        echo "  pip3 install llama-cpp-python"
+        echo "  pip3 install llama-cpp-python --break-system-packages"
         return 1
     fi
 }
