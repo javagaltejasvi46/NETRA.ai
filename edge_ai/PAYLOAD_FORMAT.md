@@ -8,37 +8,37 @@
 
 ```json
 {
-  "tick": 42,
-  "timestamp": 1778280852338,
+  "timestamp": 1732452123456,
+  "tick": 47,
   "squad": [
     {
       "id": "alpha",
       "callsign": "ALPHA-1",
-      "status": "nominal",
-      "heartRate": 82,
-      "battery": 91,
       "lat": 12.9795,
-      "lng": 77.5924
+      "lng": 77.5925,
+      "heartRate": 60,
+      "battery": 89.9,
+      "status": "nominal"
     },
     {
-      "id": "bravo",
-      "callsign": "BRAVO-2",
-      "status": "warning",
-      "heartRate": 108,
-      "battery": 54,
-      "lat": 12.9793,
-      "lng": 77.5921
+      "id": "charlie",
+      "callsign": "CHARLIE-3",
+      "lat": 12.9792,
+      "lng": 77.5928,
+      "heartRate": 77,
+      "battery": 88.6,
+      "status": "nominal"
     }
   ],
   "enemy": {
-    "callsign": "HOSTILE",
-    "lat": 12.9797,
-    "lng": 77.5930
+    "callsign": "HOSTILE-A",
+    "lat": 12.9798,
+    "lng": 77.5932
   },
   "hostage": {
-    "callsign": "HOSTAGE",
-    "lat": 12.9796,
-    "lng": 77.5928
+    "callsign": "VICTIM-1",
+    "lat": 12.9793,
+    "lng": 77.5930
   }
 }
 ```
@@ -110,37 +110,37 @@ mosquitto_sub -t "battlefield/ai-response" -v
 ### Send Test Telemetry
 ```bash
 mosquitto_pub -t "battlefield/sensor" -m '{
-  "tick": 42,
-  "timestamp": 1778280852338,
+  "timestamp": 1732452123456,
+  "tick": 47,
   "squad": [
     {
       "id": "alpha",
       "callsign": "ALPHA-1",
-      "status": "nominal",
-      "heartRate": 82,
-      "battery": 91,
       "lat": 12.9795,
-      "lng": 77.5924
+      "lng": 77.5925,
+      "heartRate": 60,
+      "battery": 89.9,
+      "status": "nominal"
     },
     {
-      "id": "bravo",
-      "callsign": "BRAVO-2",
-      "status": "warning",
-      "heartRate": 108,
-      "battery": 54,
-      "lat": 12.9793,
-      "lng": 77.5921
+      "id": "charlie",
+      "callsign": "CHARLIE-3",
+      "lat": 12.9792,
+      "lng": 77.5928,
+      "heartRate": 77,
+      "battery": 88.6,
+      "status": "nominal"
     }
   ],
   "enemy": {
-    "callsign": "HOSTILE",
-    "lat": 12.9797,
-    "lng": 77.5930
+    "callsign": "HOSTILE-A",
+    "lat": 12.9798,
+    "lng": 77.5932
   },
   "hostage": {
-    "callsign": "HOSTAGE",
-    "lat": 12.9796,
-    "lng": 77.5928
+    "callsign": "VICTIM-1",
+    "lat": 12.9793,
+    "lng": 77.5930
   }
 }'
 ```

@@ -74,14 +74,15 @@ def log_telemetry(logger: logging.Logger, telemetry) -> None:
         logger: Logger instance
         telemetry: TelemetryData instance
     """
+    primary_soldier = telemetry.get_primary_soldier()
     logger.info(
         f"Telemetry received - "
+        f"tick: {telemetry.tick}, "
         f"timestamp: {telemetry.timestamp}, "
-        f"soldier: ({telemetry.soldier['x']:.1f}, {telemetry.soldier['y']:.1f}), "
-        f"enemy: ({telemetry.enemy['x']:.1f}, {telemetry.enemy['y']:.1f}), "
-        f"hostage: ({telemetry.hostage['x']:.1f}, {telemetry.hostage['y']:.1f}), "
-        f"environment: {telemetry.environment}, "
-        f"threat_level: {telemetry.threat_level}"
+        f"squad: {len(telemetry.squad)} members, "
+        f"primary: {primary_soldier.callsign} ({primary_soldier.lat:.4f}, {primary_soldier.lng:.4f}), "
+        f"enemy: {telemetry.enemy.callsign} ({telemetry.enemy.lat:.4f}, {telemetry.enemy.lng:.4f}), "
+        f"hostage: {telemetry.hostage.callsign} ({telemetry.hostage.lat:.4f}, {telemetry.hostage.lng:.4f})"
     )
 
 
