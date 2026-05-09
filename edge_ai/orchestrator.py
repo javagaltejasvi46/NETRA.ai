@@ -125,39 +125,68 @@ class EdgeAICopilot:
         print("="*80)
         
         try:
-            # Display received data
+            # Display received data with complete formatting
+            print(f"📊 TELEMETRY DATA")
             print(f"Tick      : {telemetry.tick}")
             print(f"Timestamp : {telemetry.timestamp}")
-            print(f"Squad     : {len(telemetry.squad)} members")
-            for soldier in telemetry.squad:
+            print(f"Environment: {telemetry.environment}")
+            print()
+            
+            print(f"👥 SQUAD ({len(telemetry.squad)} members)")
+            for i, soldier in enumerate(telemetry.squad, 1):
                 icon = "🟢" if soldier.status == "nominal" else "🟡" if soldier.status == "warning" else "🔴"
-                print(f"  {icon} {soldier.callsign}: HR={soldier.heart_rate}bpm, Battery={soldier.battery}%")
-            print(f"Enemy     : {telemetry.enemy.callsign} at ({telemetry.enemy.lat:.4f}, {telemetry.enemy.lng:.4f})")
-            print(f"Hostage   : {telemetry.hostage.callsign} at ({telemetry.hostage.lat:.4f}, {telemetry.hostage.lng:.4f})")
+                print(f"  {i}. {icon} {soldier.callsign} (ID: {soldier.id})")
+                print(f"     Status   : {soldier.status}")
+                print(f"     Position : ({soldier.lat:.6f}, {soldier.lng:.6f})")
+                print(f"     Heart Rate: {soldier.heart_rate} bpm")
+                print(f"     Battery  : {soldier.battery}%")
+                if i < len(telemetry.squad):
+                    print()
+            
+            print()
+            print(f"⚠️  ENEMY")
+            print(f"  Callsign : {telemetry.enemy.callsign}")
+            print(f"  Position : ({telemetry.enemy.lat:.6f}, {telemetry.enemy.lng:.6f})")
+            
+            print()
+            print(f"🆘 HOSTAGE")
+            print(f"  Callsign : {telemetry.hostage.callsign}")
+            print(f"  Position : ({telemetry.hostage.lat:.6f}, {telemetry.hostage.lng:.6f})")
+            if hasattr(telemetry.hostage, 'status'):
+                print(f"  Status   : {telemetry.hostage.status}")
             
             # Display voice message if present
             if telemetry.voice_message:
-                print("-"*80)
+                print()
                 print(f"🎤 VOICE MESSAGE")
-                print(f"From      : {telemetry.voice_message.unit}")
-                print(f"Message   : \"{telemetry.voice_message.message}\"")
-                print(f"Source    : {telemetry.voice_message.source}")
+                print(f"  From     : {telemetry.voice_message.unit}")
+                print(f"  Message  : \"{telemetry.voice_message.message}\"")
+                print(f"  Source   : {telemetry.voice_message.source}")
+                print(f"  Timestamp: {telemetry.voice_message.timestamp}")
             
             print("-"*80)
             
             # Step 1: Analyze threat
-            print("🔍 Analyzing threat...")
+            print("🔍 THREAT ANALYSIS")
             assessment = self.threat_analyzer.analyze(telemetry)
             
-            print(f"Primary Soldier : {assessment.primary_soldier_id}")
-            print(f"Enemy Distance  : {assessment.enemy_distance:.1f}m")
-            print(f"Threat Level    : {assessment.threat_level}")
-            print(f"Risk Score      : {assessment.risk_score:.2f}")
-            print(f"Squad Status    : {assessment.squad_status}")
+            print(f"Primary Soldier    : {assessment.primary_soldier_id}")
+            print(f"Enemy Distance     : {assessment.enemy_distance:.1f}m")
+            print(f"Hostage Distance   : {assessment.hostage_distance:.1f}m (from primary)")
+            print(f"Threat Level       : {assessment.threat_level}")
+            print(f"Risk Score         : {assessment.risk_score:.2f}")
+            print(f"Squad Status       : {assessment.squad_status}")
+            print(f"Hostage Risk       : {assessment.hostage_risk}")
+            print(f"Stress Level       : {'HIGH' if assessment.high_stress else 'NORMAL'}")
             print("-"*80)
             
             # Step 2: Build prompt
-            print("🤖 Generating AI decision...")
+            if telemetry.voice_message:
+                print(f"🤖 PROCESSING VOICE COMMAND")
+                print(f"Command from {telemetry.voice_message.unit}: \"{telemetry.voice_message.message}\"")
+            else:
+                print(f"🤖 GENERATING TACTICAL GUIDANCE")
+            
             prompt = self.prompt_builder.build_prompt(telemetry, assessment)
             logger.debug(f"Prompt: {prompt}")
             
@@ -170,19 +199,28 @@ class EdgeAICopilot:
                 logger.info(f"✅ LLM generated: {decision}")
             else:
                 # Fallback
-                decision = "OK, I received your message."
+                if telemetry.voice_message:
+                    decision = f"Roger {telemetry.voice_message.unit}, message received."
+                else:
+                    decision = "Maintain current position and monitor."
                 logger.warning("⚠️  LLM returned empty, using acknowledgment")
             
             # Ensure we have a valid decision
             if not decision or len(decision.strip()) < 3:
-                decision = "OK, I received your message."
+                if telemetry.voice_message:
+                    decision = f"Roger {telemetry.voice_message.unit}, message received."
+                else:
+                    decision = "Maintain current position and monitor."
                 logger.warning("⚠️  Decision validation failed, using acknowledgment")
             
             # Calculate latency
             latency_ms = int((time.time() - start_time) * 1000)
             
             # Step 4: Print decision
-            print("✅ AI DECISION GENERATED")
+            print()
+            print("✅ AI RESPONSE")
+            if telemetry.voice_message:
+                print(f"To       : {telemetry.voice_message.unit}")
             print(f"Decision : {decision}")
             print(f"Latency  : {latency_ms}ms")
             print("-"*80)
