@@ -3,73 +3,221 @@ Data models for telemetry parsing and validation.
 """
 import json
 import logging
+import math
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Position:
-    """Represents a 2D position coordinate"""
-    x: float
-    y: float
+class SquadMember:
+    """Represents a squad member"""
+    id: str
+    callsign: str
+    status: str
+    heart_rate: int
+    battery: int
+    lat: float
+    lng: float
+
+
+@dataclass
+class Enemy:
+    """Represents enemy position"""
+    callsign: str
+    lat: float
+    lng: float
+
+
+@dataclass
+class Hostage:
+    """Represents hostage position"""
+    callsign: str
+    status: str
+    lat: float
+    lng: float
 
 
 @dataclass
 class TelemetryData:
     """
     Represents battlefield telemetry data received via MQTT.
-    New payload format:
+    
+    Payload format:
     {
-      "timestamp": 1710000000,
-      "soldier": {"x": 120, "y": 340, "heart_rate": 125},
-      "enemy": {"x": 180, "y": 360, "distance": 90},
-      "hostage": {"x": 140, "y": 350}
+      "tick": 42,
+      "timestamp": 1778280852338,
+      "squad": [
+        {
+          "id": "alpha",
+          "callsign": "ALPHA-1",
+          "status": "nominal",
+          "heartRate": 82,
+          "battery": 91,
+          "lat": 12.9795,
+          "lng": 77.5924
+        },
+        ...
+      ],
+      "enemy": {
+        "callsign": "HOSTILE",
+        "lat": 12.9797,
+        "lng": 77.5930
+      },
+      "hostage": {
+        "callsign": "HOSTAGE",
+        "status": "unknown",
+        "lat": 12.9796,
+        "lng": 77.5928
+      }
     }
     """
+    tick: int
     timestamp: int
-    soldier: dict   # x, y, heart_rate
-    enemy: dict     # x, y, distance (pre-computed)
-    hostage: dict   # x, y
-    environment: str = "unknown"   # optional, defaults to unknown
-    threat_level: str = "unknown"  # optional, defaults to unknown
+    squad: List[SquadMember]
+    enemy: Enemy
+    hostage: Hostage
+    
+    # Computed fields for backward compatibility
+    soldier: dict = None  # Primary soldier (first squad member)
+    environment: str = "urban"
+    threat_level: str = "unknown"
 
     @staticmethod
     def from_json(payload: str) -> Optional['TelemetryData']:
+        """Parse JSON payload into TelemetryData object."""
         try:
             data = json.loads(payload)
 
-            # Required fields only
-            for field in ['timestamp', 'soldier', 'enemy', 'hostage']:
+            # Validate required fields
+            required_fields = ['tick', 'timestamp', 'squad', 'enemy', 'hostage']
+            for field in required_fields:
                 if field not in data:
                     logger.error(f"Missing required field: {field}")
                     return None
 
-            if not all(k in data['soldier'] for k in ['x', 'y', 'heart_rate']):
-                logger.error("Missing soldier fields (x, y, heart_rate)")
+            # Validate squad
+            if not isinstance(data['squad'], list) or len(data['squad']) == 0:
+                logger.error("Squad must be a non-empty list")
                 return None
 
-            if not all(k in data['enemy'] for k in ['x', 'y']):
-                logger.error("Missing enemy fields (x, y)")
+            # Parse squad members
+            squad_members = []
+            for member in data['squad']:
+                try:
+                    squad_member = SquadMember(
+                        id=member['id'],
+                        callsign=member['callsign'],
+                        status=member['status'],
+                        heart_rate=int(member['heartRate']),
+                        battery=int(member['battery']),
+                        lat=float(member['lat']),
+                        lng=float(member['lng'])
+                    )
+                    squad_members.append(squad_member)
+                except (KeyError, ValueError) as e:
+                    logger.error(f"Invalid squad member data: {e}")
+                    return None
+
+            # Parse enemy
+            try:
+                enemy = Enemy(
+                    callsign=data['enemy']['callsign'],
+                    lat=float(data['enemy']['lat']),
+                    lng=float(data['enemy']['lng'])
+                )
+            except (KeyError, ValueError) as e:
+                logger.error(f"Invalid enemy data: {e}")
                 return None
 
-            if not all(k in data['hostage'] for k in ['x', 'y']):
-                logger.error("Missing hostage fields (x, y)")
+            # Parse hostage
+            try:
+                hostage = Hostage(
+                    callsign=data['hostage']['callsign'],
+                    status=data['hostage']['status'],
+                    lat=float(data['hostage']['lat']),
+                    lng=float(data['hostage']['lng'])
+                )
+            except (KeyError, ValueError) as e:
+                logger.error(f"Invalid hostage data: {e}")
                 return None
 
-            return TelemetryData(
+            # Create telemetry object
+            telemetry = TelemetryData(
+                tick=int(data['tick']),
                 timestamp=int(data['timestamp']),
-                soldier=data['soldier'],
-                enemy=data['enemy'],
-                hostage=data['hostage'],
-                environment=data.get('environment', 'unknown'),
-                threat_level=data.get('threat_level', 'unknown')
+                squad=squad_members,
+                enemy=enemy,
+                hostage=hostage
             )
+            
+            # Create soldier dict for backward compatibility (use first squad member)
+            primary_soldier = squad_members[0]
+            telemetry.soldier = {
+                'x': primary_soldier.lat,
+                'y': primary_soldier.lng,
+                'heart_rate': primary_soldier.heart_rate,
+                'id': primary_soldier.id,
+                'callsign': primary_soldier.callsign,
+                'status': primary_soldier.status,
+                'battery': primary_soldier.battery
+            }
+
+            return telemetry
 
         except json.JSONDecodeError as e:
             logger.error(f"JSON decode error: {e}. Payload: {payload[:100]}")
             return None
         except Exception as e:
             logger.error(f"Unexpected error parsing telemetry: {e}")
+            import traceback
+            traceback.print_exc()
             return None
+
+    @staticmethod
+    def from_dict(data: dict) -> Optional['TelemetryData']:
+        """Create TelemetryData from dictionary (for testing)."""
+        return TelemetryData.from_json(json.dumps(data))
+    
+    def calculate_distance(self, lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+        """
+        Calculate distance between two GPS coordinates in meters using Haversine formula.
+        
+        Args:
+            lat1, lng1: First coordinate
+            lat2, lng2: Second coordinate
+            
+        Returns:
+            Distance in meters
+        """
+        # Earth radius in meters
+        R = 6371000
+        
+        # Convert to radians
+        lat1_rad = math.radians(lat1)
+        lat2_rad = math.radians(lat2)
+        delta_lat = math.radians(lat2 - lat1)
+        delta_lng = math.radians(lng2 - lng1)
+        
+        # Haversine formula
+        a = math.sin(delta_lat/2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lng/2)**2
+        c = 2 * math.asin(math.sqrt(a))
+        
+        distance = R * c
+        return distance
+    
+    def get_primary_soldier(self) -> SquadMember:
+        """Get the primary soldier (first squad member)."""
+        return self.squad[0]
+    
+    def get_soldier_by_id(self, soldier_id: str) -> Optional[SquadMember]:
+        """Get a specific soldier by ID."""
+        for soldier in self.squad:
+            if soldier.id == soldier_id:
+                return soldier
+        return None
+    
+    def get_highest_risk_soldier(self) -> SquadMember:
+        """Get the soldier with highest heart rate (most stressed)."""
+        return max(self.squad, key=lambda s: s.heart_rate)

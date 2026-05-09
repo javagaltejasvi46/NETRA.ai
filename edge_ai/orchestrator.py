@@ -124,11 +124,17 @@ class EdgeAICopilot:
             print("\n" + "="*70)
             print("📡 TELEMETRY RECEIVED")
             print("="*70)
+            print(f"  Tick        : {telemetry.tick}")
             print(f"  Timestamp   : {telemetry.timestamp}")
-            print(f"  Soldier     : pos=({telemetry.soldier['x']}, {telemetry.soldier['y']})  HR={telemetry.soldier['heart_rate']} bpm")
-            print(f"  Enemy       : pos=({telemetry.enemy['x']}, {telemetry.enemy['y']})")
-            print(f"  Hostage     : pos=({telemetry.hostage['x']}, {telemetry.hostage['y']})")
-            print(f"  Environment : {telemetry.environment}")
+            print(f"  Squad Size  : {len(telemetry.squad)} members")
+            
+            # Display squad members
+            for soldier in telemetry.squad:
+                status_icon = "🟢" if soldier.status == "nominal" else "🟡" if soldier.status == "warning" else "🔴"
+                print(f"    {status_icon} {soldier.callsign}: HR={soldier.heart_rate}bpm, Battery={soldier.battery}%, Status={soldier.status}")
+            
+            print(f"  Enemy       : {telemetry.enemy.callsign} at ({telemetry.enemy.lat:.4f}, {telemetry.enemy.lng:.4f})")
+            print(f"  Hostage     : {telemetry.hostage.callsign} ({telemetry.hostage.status}) at ({telemetry.hostage.lat:.4f}, {telemetry.hostage.lng:.4f})")
             print("-"*70)
 
             # Step 1: Analyze threat
@@ -136,11 +142,13 @@ class EdgeAICopilot:
 
             # Console display
             print(f"🔍 THREAT ANALYSIS")
+            print(f"  Primary     : {assessment.primary_soldier_id}")
             print(f"  Distance    : {assessment.enemy_distance:.1f}m")
             print(f"  Threat Level: {assessment.threat_level}")
             print(f"  Risk Score  : {assessment.risk_score:.2f}")
             print(f"  Stress Level: {assessment.soldier_stress}")
             print(f"  Hostage Risk: {assessment.hostage_risk}")
+            print(f"  Squad Status: {assessment.squad_status}")
             print("-"*70)
 
             # Step 2: Build prompt

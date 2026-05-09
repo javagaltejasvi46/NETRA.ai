@@ -124,22 +124,39 @@ HOSTAGE_RISK_DISTANCE = 50   # Hostage proximity for ELEVATED risk (meters)
 
 ```json
 {
-  "timestamp": 1710000000,
-  "soldier": {
-    "x": 120,
-    "y": 340,
-    "heart_rate": 125
-  },
+  "tick": 42,
+  "timestamp": 1778280852338,
+  "squad": [
+    {
+      "id": "alpha",
+      "callsign": "ALPHA-1",
+      "status": "nominal",
+      "heartRate": 82,
+      "battery": 91,
+      "lat": 12.9795,
+      "lng": 77.5924
+    },
+    {
+      "id": "bravo",
+      "callsign": "BRAVO-2",
+      "status": "warning",
+      "heartRate": 108,
+      "battery": 54,
+      "lat": 12.9793,
+      "lng": 77.5921
+    }
+  ],
   "enemy": {
-    "x": 180,
-    "y": 360
+    "callsign": "HOSTILE",
+    "lat": 12.9797,
+    "lng": 77.5930
   },
   "hostage": {
-    "x": 140,
-    "y": 350
-  },
-  "environment": "urban",
-  "threat_level": "high"
+    "callsign": "HOSTAGE",
+    "status": "unknown",
+    "lat": 12.9796,
+    "lng": 77.5928
+  }
 }
 ```
 
@@ -149,7 +166,7 @@ HOSTAGE_RISK_DISTANCE = 50   # Hostage proximity for ELEVATED risk (meters)
 {
   "decision": "Take cover and assess situation",
   "risk_score": 0.87,
-  "timestamp": 1710000000,
+  "timestamp": 1778280852338,
   "latency_ms": 2450
 }
 ```
@@ -173,12 +190,39 @@ mosquitto_sub -t "battlefield/ai-response" -v
 
 # Send test telemetry (in another terminal)
 mosquitto_pub -t "battlefield/sensor" -m '{
-  "timestamp": 1710000000,
-  "soldier": {"x": 120, "y": 340, "heart_rate": 125},
-  "enemy": {"x": 180, "y": 360},
-  "hostage": {"x": 140, "y": 350},
-  "environment": "urban",
-  "threat_level": "high"
+  "tick": 42,
+  "timestamp": 1778280852338,
+  "squad": [
+    {
+      "id": "alpha",
+      "callsign": "ALPHA-1",
+      "status": "nominal",
+      "heartRate": 82,
+      "battery": 91,
+      "lat": 12.9795,
+      "lng": 77.5924
+    },
+    {
+      "id": "bravo",
+      "callsign": "BRAVO-2",
+      "status": "warning",
+      "heartRate": 108,
+      "battery": 54,
+      "lat": 12.9793,
+      "lng": 77.5921
+    }
+  ],
+  "enemy": {
+    "callsign": "HOSTILE",
+    "lat": 12.9797,
+    "lng": 77.5930
+  },
+  "hostage": {
+    "callsign": "HOSTAGE",
+    "status": "unknown",
+    "lat": 12.9796,
+    "lng": 77.5928
+  }
 }'
 ```
 

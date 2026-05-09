@@ -23,17 +23,22 @@ class ThreatAssessment:
         enemy_distance: Distance from soldier to enemy in meters
         soldier_stress: Soldier stress state (HIGH, NORMAL)
         hostage_risk: Hostage risk level (ELEVATED, NORMAL)
+        primary_soldier_id: ID of the primary soldier being analyzed
+        squad_status: Overall squad status summary
     """
     risk_score: float
     threat_level: str
     enemy_distance: float
     soldier_stress: str
     hostage_risk: str
+    primary_soldier_id: str
+    squad_status: str
 
 
 class ThreatAnalyzer:
     """
     Analyzes battlefield telemetry to compute threat levels and risk scores.
+    Works with GPS coordinates and squad-based telemetry.
     """
     
     def __init__(self, critical_distance: int, stress_heart_rate: int, 
@@ -60,28 +65,19 @@ class ThreatAnalyzer:
         Returns:
             ThreatAssessment with computed metrics
         """
-        # Extract positions
-        soldier_x = telemetry.soldier['x']
-        soldier_y = telemetry.soldier['y']
-        soldier_hr = telemetry.soldier['heart_rate']
+        # Get primary soldier (highest risk or first in squad)
+        primary_soldier = telemetry.get_highest_risk_soldier()
         
-        enemy_x = telemetry.enemy['x']
-        enemy_y = telemetry.enemy['y']
+        # Calculate distance from primary soldier to enemy using GPS coordinates
+        enemy_distance = telemetry.calculate_distance(
+            primary_soldier.lat, primary_soldier.lng,
+            telemetry.enemy.lat, telemetry.enemy.lng
+        )
         
-        hostage_x = telemetry.hostage['x']
-        hostage_y = telemetry.hostage['y']
-        
-        # Compute enemy distance - use pre-computed if available, else Euclidean
-        if 'distance' in telemetry.enemy and telemetry.enemy['distance'] is not None:
-            enemy_distance = float(telemetry.enemy['distance'])
-        else:
-            enemy_distance = self._calculate_distance(
-                soldier_x, soldier_y, enemy_x, enemy_y
-            )
-        
-        # Compute hostage distance from enemy
-        hostage_enemy_distance = self._calculate_distance(
-            hostage_x, hostage_y, enemy_x, enemy_y
+        # Calculate hostage distance from enemy
+        hostage_enemy_distance = telemetry.calculate_distance(
+            telemetry.hostage.lat, telemetry.hostage.lng,
+            telemetry.enemy.lat, telemetry.enemy.lng
         )
         
         # Classify threat level based on enemy distance
@@ -95,24 +91,33 @@ class ThreatAnalyzer:
             threat_level = "LOW"
         
         # Determine soldier stress state
-        soldier_stress = "HIGH" if soldier_hr > self.stress_heart_rate else "NORMAL"
+        soldier_stress = "HIGH" if primary_soldier.heart_rate > self.stress_heart_rate else "NORMAL"
         
         # Determine hostage risk
         hostage_risk = "ELEVATED" if hostage_enemy_distance < self.hostage_risk_distance else "NORMAL"
         
+        # Analyze squad status
+        squad_status = self._analyze_squad_status(telemetry.squad)
+        
         # Compute normalized risk score (0.0 to 1.0)
-        # Formula: distance_factor (60%) + stress_factor (20%) + hostage_factor (20%)
+        # Formula: distance_factor (50%) + stress_factor (20%) + hostage_factor (15%) + squad_factor (15%)
         distance_factor = max(0.0, 1.0 - (enemy_distance / 200.0))
-        stress_factor = 1.0 if soldier_hr > self.stress_heart_rate else 0.0
+        stress_factor = 1.0 if primary_soldier.heart_rate > self.stress_heart_rate else 0.0
         hostage_factor = 1.0 if hostage_enemy_distance < self.hostage_risk_distance else 0.0
         
-        risk_score = (distance_factor * 0.6) + (stress_factor * 0.2) + (hostage_factor * 0.2)
+        # Squad factor: consider number of warning/critical status members
+        warning_count = sum(1 for s in telemetry.squad if s.status == "warning")
+        critical_count = sum(1 for s in telemetry.squad if s.status == "critical")
+        squad_factor = min(1.0, (warning_count * 0.3 + critical_count * 0.7) / len(telemetry.squad))
+        
+        risk_score = (distance_factor * 0.5) + (stress_factor * 0.2) + (hostage_factor * 0.15) + (squad_factor * 0.15)
         risk_score = min(1.0, max(0.0, risk_score))  # Clamp to [0, 1]
         
         logger.info(
-            f"Threat Analysis: distance={enemy_distance:.1f}m, "
-            f"threat={threat_level}, stress={soldier_stress}, "
-            f"hostage_risk={hostage_risk}, risk_score={risk_score:.2f}"
+            f"Threat Analysis: soldier={primary_soldier.callsign}, "
+            f"distance={enemy_distance:.1f}m, threat={threat_level}, "
+            f"stress={soldier_stress}, hostage_risk={hostage_risk}, "
+            f"squad={squad_status}, risk_score={risk_score:.2f}"
         )
         
         return ThreatAssessment(
@@ -120,19 +125,27 @@ class ThreatAnalyzer:
             threat_level=threat_level,
             enemy_distance=enemy_distance,
             soldier_stress=soldier_stress,
-            hostage_risk=hostage_risk
+            hostage_risk=hostage_risk,
+            primary_soldier_id=primary_soldier.callsign,
+            squad_status=squad_status
         )
     
-    @staticmethod
-    def _calculate_distance(x1: float, y1: float, x2: float, y2: float) -> float:
+    def _analyze_squad_status(self, squad) -> str:
         """
-        Calculate Euclidean distance between two points.
+        Analyze overall squad status.
         
         Args:
-            x1, y1: First point coordinates
-            x2, y2: Second point coordinates
+            squad: List of SquadMember objects
             
         Returns:
-            Distance in same units as input coordinates
+            Status string (CRITICAL, WARNING, NOMINAL)
         """
-        return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+        critical_count = sum(1 for s in squad if s.status == "critical")
+        warning_count = sum(1 for s in squad if s.status == "warning")
+        
+        if critical_count > 0:
+            return "CRITICAL"
+        elif warning_count > 0:
+            return "WARNING"
+        else:
+            return "NOMINAL"

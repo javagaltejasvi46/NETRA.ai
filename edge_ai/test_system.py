@@ -191,12 +191,39 @@ def test_threat_analysis():
         
         # Create test telemetry
         telemetry_dict = {
+            "tick": 42,
             "timestamp": int(time.time()),
-            "soldier": {"x": 120, "y": 340, "heart_rate": 125},
-            "enemy": {"x": 180, "y": 360},
-            "hostage": {"x": 140, "y": 350},
-            "environment": "urban",
-            "threat_level": "high"
+            "squad": [
+                {
+                    "id": "alpha",
+                    "callsign": "ALPHA-1",
+                    "status": "nominal",
+                    "heartRate": 82,
+                    "battery": 91,
+                    "lat": 12.9795,
+                    "lng": 77.5924
+                },
+                {
+                    "id": "bravo",
+                    "callsign": "BRAVO-2",
+                    "status": "warning",
+                    "heartRate": 108,
+                    "battery": 54,
+                    "lat": 12.9793,
+                    "lng": 77.5921
+                }
+            ],
+            "enemy": {
+                "callsign": "HOSTILE",
+                "lat": 12.9797,
+                "lng": 77.5930
+            },
+            "hostage": {
+                "callsign": "HOSTAGE",
+                "status": "unknown",
+                "lat": 12.9796,
+                "lng": 77.5928
+            }
         }
         
         telemetry = TelemetryData.from_dict(telemetry_dict)
@@ -210,11 +237,13 @@ def test_threat_analysis():
         
         assessment = analyzer.analyze(telemetry)
         
+        print_info(f"Primary soldier: {assessment.primary_soldier_id}")
         print_info(f"Enemy distance: {assessment.enemy_distance:.1f}m")
         print_info(f"Threat level: {assessment.threat_level}")
         print_info(f"Risk score: {assessment.risk_score:.2f}")
         print_info(f"Soldier stress: {assessment.soldier_stress}")
         print_info(f"Hostage risk: {assessment.hostage_risk}")
+        print_info(f"Squad status: {assessment.squad_status}")
         
         print_success("Threat analysis completed")
         return True

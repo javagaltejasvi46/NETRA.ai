@@ -17,7 +17,7 @@ class PromptBuilder:
     """
     
     SYSTEM_INSTRUCTION = "You are a battlefield tactical AI. Generate one short tactical recommendation."
-    MAX_CONTEXT_LENGTH = 150  # characters, excluding system instruction
+    MAX_CONTEXT_LENGTH = 200  # characters, excluding system instruction
     
     def build_prompt(self, telemetry: 'TelemetryData', 
                      assessment: 'ThreatAssessment') -> str:
@@ -31,15 +31,15 @@ class PromptBuilder:
         Returns:
             Formatted prompt string for LLM inference
         """
-        # Extract soldier heart rate
-        soldier_hr = telemetry.soldier['heart_rate']
+        # Get primary soldier info
+        primary_soldier = telemetry.get_primary_soldier()
         
         # Build context string with proper formatting
         context_parts = [
-            f"Enemy distance: {assessment.enemy_distance:.0f}m.",
-            f"Soldier stress: {assessment.soldier_stress.lower()}.",
-            f"Hostage proximity: {assessment.hostage_risk.lower()}.",
-            f"Environment: {telemetry.environment}."
+            f"Squad: {len(telemetry.squad)} members, status {assessment.squad_status.lower()}.",
+            f"Primary: {assessment.primary_soldier_id}, HR {primary_soldier.heart_rate}bpm.",
+            f"Enemy: {assessment.enemy_distance:.0f}m away, threat {assessment.threat_level.lower()}.",
+            f"Hostage: {assessment.hostage_risk.lower()} risk.",
         ]
         
         context = " ".join(context_parts)
