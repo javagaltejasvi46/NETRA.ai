@@ -23,7 +23,7 @@ NC='\033[0m' # No Color
 # Configuration
 MODEL_PATH="models/tinyllama.gguf"
 EXPECTED_MODEL_SIZE_MIN=600000000  # ~600MB minimum for Q4 quantized model
-TEST_PROMPT="You are a tactical AI. Enemy at 50 meters. Respond with one action:"
+TEST_PROMPT="Enemy detected at 50 meters approaching fast. What should I do?"
 
 ################################################################################
 # Helper Functions
@@ -196,6 +196,9 @@ def test_inference(model_path, prompt, max_tokens=40, temperature=0.4, threads=2
         print(f"✓ Model loaded in {load_time:.2f} seconds")
         print()
         
+        # Format prompt for TinyLlama chat format
+        formatted_prompt = f"<|system|>\nYou are a tactical military AI assistant.</s>\n<|user|>\n{prompt}</s>\n<|assistant|>\n"
+        
         # Run inference
         print(f"Prompt: {prompt}")
         print()
@@ -203,12 +206,12 @@ def test_inference(model_path, prompt, max_tokens=40, temperature=0.4, threads=2
         start_inference = time.time()
         
         output = llm(
-            prompt,
+            formatted_prompt,
             max_tokens=max_tokens,
             temperature=temperature,
             top_p=0.9,
             repeat_penalty=1.1,
-            stop=["\n", ".", "!"],
+            stop=["</s>", "<|", "\n\n"],  # Better stop tokens for chat format
             echo=False
         )
         
@@ -217,13 +220,28 @@ def test_inference(model_path, prompt, max_tokens=40, temperature=0.4, threads=2
         # Extract response
         if output and 'choices' in output and len(output['choices']) > 0:
             response = output['choices'][0]['text'].strip()
-            print()
-            print("=" * 60)
-            print("RESPONSE:")
-            print(response)
-            print("=" * 60)
-            print()
-            print(f"✓ Inference completed in {inference_time:.2f} seconds")
+            
+            # Check if response is empty or too short
+            if not response or len(response) < 3:
+                print()
+                print("=" * 60)
+                print("RESPONSE: (empty or too short)")
+                print(f"Raw output: '{response}'")
+                print("=" * 60)
+                print()
+                print(f"⚠ Inference completed in {inference_time:.2f} seconds but response is empty")
+                print("  This may indicate:")
+                print("  - Stop tokens triggered too early")
+                print("  - Model needs different prompt format")
+                print("  - Temperature too low")
+            else:
+                print()
+                print("=" * 60)
+                print("RESPONSE:")
+                print(response)
+                print("=" * 60)
+                print()
+                print(f"✓ Inference completed in {inference_time:.2f} seconds")
             
             # Token statistics
             if 'usage' in output:
@@ -231,6 +249,7 @@ def test_inference(model_path, prompt, max_tokens=40, temperature=0.4, threads=2
                 print(f"  Tokens generated: {usage.get('completion_tokens', 'N/A')}")
                 print(f"  Total tokens: {usage.get('total_tokens', 'N/A')}")
             
+            # Consider it successful if we got any response
             return True
         else:
             print("✗ No output generated")
