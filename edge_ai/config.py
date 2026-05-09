@@ -25,11 +25,11 @@ class Config:
     # AI/LLM SETTINGS
     # ============================================================================
     MODEL_PATH: str = "models/tinyllama.gguf"
-    MAX_TOKENS: int = 50
-    TEMPERATURE: float = 0.5
+    MAX_TOKENS: int = 30  # Short tactical responses (under 20 words)
+    TEMPERATURE: float = 0.4  # More focused and consistent
     THREADS: int = 2
     INFERENCE_TIMEOUT: int = 5
-    MAX_DECISION_WORDS: int = 20
+    MAX_DECISION_WORDS: int = 20  # Enforce 20-word limit
     
     # ============================================================================
     # THREAT ANALYSIS THRESHOLDS

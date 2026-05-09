@@ -96,21 +96,35 @@ class ContextStore:
                     "lng": telemetry.hostage.lng
                 },
                 
+                # Voice message (if present)
+                "voice_message": None,
+                
                 # Threat assessment
                 "assessment": {
                     "risk_score": assessment.risk_score,
                     "threat_level": assessment.threat_level,
                     "enemy_distance": assessment.enemy_distance,
+                    "hostage_distance": assessment.hostage_distance,
                     "soldier_stress": assessment.soldier_stress,
                     "hostage_risk": assessment.hostage_risk,
                     "primary_soldier_id": assessment.primary_soldier_id,
-                    "squad_status": assessment.squad_status
+                    "squad_status": assessment.squad_status,
+                    "high_stress": assessment.high_stress
                 },
                 
                 # AI decision
                 "decision": decision,
                 "latency_ms": latency_ms
             }
+            
+            # Add voice message if present
+            if telemetry.voice_message:
+                entry["voice_message"] = {
+                    "unit": telemetry.voice_message.unit,
+                    "message": telemetry.voice_message.message,
+                    "timestamp": telemetry.voice_message.timestamp,
+                    "source": telemetry.voice_message.source
+                }
             
             # Store in memory buffer
             self.memory_buffer.append(entry)
