@@ -162,6 +162,7 @@ class TelemetryData:
             # Parse voice message (optional)
             voice_message = None
             if 'voiceMessage' in data and data['voiceMessage'] is not None:
+                logger.info(f"Voice message field found in payload")
                 try:
                     vm_data = data['voiceMessage']
                     # Validate all required fields exist
@@ -172,12 +173,15 @@ class TelemetryData:
                             timestamp=int(vm_data['timestamp']),
                             source=vm_data['source']
                         )
-                        logger.info(f"Voice message from {voice_message.unit}: {voice_message.message}")
+                        logger.info(f"✅ Voice message parsed: from {voice_message.unit}: {voice_message.message}")
                     else:
                         logger.warning("Voice message missing required fields, ignoring")
+                        logger.warning(f"Voice message data: {vm_data}")
                 except (KeyError, ValueError, TypeError) as e:
                     logger.warning(f"Invalid voice message data: {e}")
                     # Continue without voice message
+            else:
+                logger.debug("No voiceMessage field in payload")
 
             # Create telemetry object
             telemetry = TelemetryData(

@@ -156,13 +156,15 @@ class EdgeAICopilot:
                 print(f"  Status   : {telemetry.hostage.status}")
             
             # Display voice message if present
-            if telemetry.voice_message:
+            if telemetry.voice_message is not None:
                 print()
                 print(f"🎤 VOICE MESSAGE")
                 print(f"  From     : {telemetry.voice_message.unit}")
                 print(f"  Message  : \"{telemetry.voice_message.message}\"")
                 print(f"  Source   : {telemetry.voice_message.source}")
                 print(f"  Timestamp: {telemetry.voice_message.timestamp}")
+            else:
+                logger.debug("No voice message in telemetry")
             
             print("-"*80)
             

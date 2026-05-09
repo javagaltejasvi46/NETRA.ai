@@ -21,18 +21,22 @@ class ThreatAssessment:
         risk_score: Normalized risk score (0.0 to 1.0)
         threat_level: Classification (CRITICAL, HIGH, MEDIUM, LOW)
         enemy_distance: Distance from soldier to enemy in meters
+        hostage_distance: Distance from primary soldier to hostage in meters
         soldier_stress: Soldier stress state (HIGH, NORMAL)
         hostage_risk: Hostage risk level (ELEVATED, NORMAL)
         primary_soldier_id: ID of the primary soldier being analyzed
         squad_status: Overall squad status summary
+        high_stress: Boolean indicating if soldier is under high stress
     """
     risk_score: float
     threat_level: str
     enemy_distance: float
+    hostage_distance: float
     soldier_stress: str
     hostage_risk: str
     primary_soldier_id: str
     squad_status: str
+    high_stress: bool
 
 
 class ThreatAnalyzer:
@@ -74,6 +78,12 @@ class ThreatAnalyzer:
             telemetry.enemy.lat, telemetry.enemy.lng
         )
         
+        # Calculate hostage distance from primary soldier
+        hostage_distance = telemetry.calculate_distance(
+            primary_soldier.lat, primary_soldier.lng,
+            telemetry.hostage.lat, telemetry.hostage.lng
+        )
+        
         # Calculate hostage distance from enemy
         hostage_enemy_distance = telemetry.calculate_distance(
             telemetry.hostage.lat, telemetry.hostage.lng,
@@ -91,7 +101,8 @@ class ThreatAnalyzer:
             threat_level = "LOW"
         
         # Determine soldier stress state
-        soldier_stress = "HIGH" if primary_soldier.heart_rate > self.stress_heart_rate else "NORMAL"
+        high_stress = primary_soldier.heart_rate > self.stress_heart_rate
+        soldier_stress = "HIGH" if high_stress else "NORMAL"
         
         # Determine hostage risk
         hostage_risk = "ELEVATED" if hostage_enemy_distance < self.hostage_risk_distance else "NORMAL"
@@ -124,10 +135,12 @@ class ThreatAnalyzer:
             risk_score=risk_score,
             threat_level=threat_level,
             enemy_distance=enemy_distance,
+            hostage_distance=hostage_distance,
             soldier_stress=soldier_stress,
             hostage_risk=hostage_risk,
             primary_soldier_id=primary_soldier.callsign,
-            squad_status=squad_status
+            squad_status=squad_status,
+            high_stress=high_stress
         )
     
     def _analyze_squad_status(self, squad) -> str:
