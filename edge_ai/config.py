@@ -44,6 +44,14 @@ class Config:
     LOG_DIR: str = "logs"
     LOG_RETENTION_DAYS: int = 7
     
+    # ============================================================================
+    # CONTEXT STORAGE
+    # ============================================================================
+    CONTEXT_STORAGE_DIR: str = "storage/context"
+    CONTEXT_MEMORY_ITEMS: int = 100  # Items to keep in memory
+    CONTEXT_FILE_ITEMS: int = 10000  # Items to keep in file
+    CONTEXT_RETENTION_DAYS: int = 7  # Days to keep old session files
+    
     @classmethod
     def validate(cls) -> None:
         """

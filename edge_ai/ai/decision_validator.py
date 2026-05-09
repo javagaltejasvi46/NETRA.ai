@@ -35,9 +35,9 @@ class TacticalDecisionGenerator:
         Returns:
             Validated and cleaned tactical decision
         """
-        if not raw_output:
-            logger.warning("Empty decision received")
-            return ""
+        if not raw_output or not raw_output.strip():
+            logger.warning("Empty decision received, using fallback")
+            return "Assess situation and await orders."
         
         # Clean the output
         decision = raw_output.strip()
@@ -53,6 +53,10 @@ class TacticalDecisionGenerator:
                     flags=re.IGNORECASE
                 ).strip()
         
+        # If decision became empty after cleaning, use original
+        if not decision:
+            decision = raw_output.strip()
+        
         # Check word count
         words = decision.split()
         if len(words) > self.MAX_WORDS:
@@ -61,19 +65,24 @@ class TacticalDecisionGenerator:
             )
             decision = self._truncate_at_sentence(decision, self.MAX_WORDS)
         
-        # Verify action verb presence
+        # Verify action verb presence (warning only, don't reject)
         has_action_verb = any(
             verb in decision.lower() for verb in self.ACTION_VERBS
         )
         
         if not has_action_verb:
             logger.warning(
-                f"Decision lacks action verb: {decision}. "
-                f"Expected one of: {', '.join(self.ACTION_VERBS[:5])}..."
+                f"Decision lacks action verb: {decision}"
             )
+            # Don't reject - LLM output is still valid tactical information
         
         # Format the decision
         decision = self.format_decision(decision)
+        
+        # Final safety check
+        if not decision or len(decision) < 3:
+            logger.error(f"Decision too short after validation: '{decision}'")
+            return "Maintain position and monitor."
         
         return decision
     

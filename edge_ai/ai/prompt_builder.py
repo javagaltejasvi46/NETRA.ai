@@ -16,7 +16,7 @@ class PromptBuilder:
     Constructs compact prompts for LLM inference from telemetry and threat assessment.
     """
     
-    SYSTEM_INSTRUCTION = "You are a battlefield tactical AI. Generate one short tactical recommendation."
+    SYSTEM_INSTRUCTION = "You are a battlefield tactical AI. Provide one clear action command."
     MAX_CONTEXT_LENGTH = 200  # characters, excluding system instruction
     
     def build_prompt(self, telemetry: 'TelemetryData', 

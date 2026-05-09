@@ -17,6 +17,7 @@ from edge_ai.ai.prompt_builder import PromptBuilder
 from edge_ai.ai.inference import InferenceEngine
 from edge_ai.ai.failsafe import FailsafeHandler
 from edge_ai.ai.decision_validator import TacticalDecisionGenerator
+from edge_ai.storage.context_store import ContextStore
 from edge_ai.utils.helpers import log_telemetry, log_decision, log_error
 
 logger = logging.getLogger(__name__)
@@ -78,6 +79,14 @@ class EdgeAICopilot:
             # Initialize decision validator
             self.decision_validator = TacticalDecisionGenerator()
             logger.info("✓ Decision validator initialized")
+            
+            # Initialize context store
+            self.context_store = ContextStore(
+                storage_dir="storage/context",
+                max_memory_items=100,
+                max_file_items=10000
+            )
+            logger.info("✓ Context store initialized")
             
             # Initialize MQTT publisher
             self.mqtt_publisher = MQTTPublisher(
@@ -180,7 +189,15 @@ class EdgeAICopilot:
             print(f"  Latency     : {latency_ms}ms")
             print("="*70 + "\n")
 
-            # Step 6: Publish response
+            # Step 7: Store context for future predictions
+            self.context_store.store_telemetry(
+                telemetry=telemetry,
+                assessment=assessment,
+                decision=decision,
+                latency_ms=latency_ms
+            )
+
+            # Step 8: Publish response
             self.mqtt_publisher.publish_response(
                 decision=decision,
                 risk_score=assessment.risk_score,
