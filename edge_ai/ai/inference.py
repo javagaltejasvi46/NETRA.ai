@@ -55,7 +55,7 @@ class InferenceEngine:
             self.model = Llama(
                 model_path=self.model_path,
                 n_threads=self.threads,
-                n_ctx=512,  # Context window
+                n_ctx=1024,  # Increased context window to 1024 tokens
                 verbose=False
             )
             logger.info("Model loaded successfully")

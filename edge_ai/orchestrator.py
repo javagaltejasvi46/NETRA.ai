@@ -197,7 +197,8 @@ class EdgeAICopilot:
                 print(f"🤖 GENERATING TACTICAL GUIDANCE")
             
             prompt = self.prompt_builder.build_prompt(telemetry, assessment, context_store=self.context_store)
-            logger.debug(f"Prompt: {prompt}")
+            # Don't print prompt to console - too verbose
+            logger.debug(f"Prompt length: {len(prompt)} characters")
             
             # Step 3: Generate LLM decision
             raw_decision = self.inference_engine.generate(prompt, assessment)
