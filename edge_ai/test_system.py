@@ -8,8 +8,16 @@ import os
 import time
 import json
 
-# Add parent directory to Python path to allow imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add both current directory and parent directory to Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+
+# If we're in edge_ai directory, add parent to path
+if os.path.basename(current_dir) == 'edge_ai':
+    sys.path.insert(0, parent_dir)
+else:
+    # If we're in parent directory, add current to path
+    sys.path.insert(0, current_dir)
 
 def print_header(text):
     print("\n" + "="*70)
