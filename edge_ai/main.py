@@ -1,12 +1,13 @@
 """
 Main entry point for Edge AI Copilot.
+Validates environment, initializes components, and starts the system.
 """
 import sys
 import os
 import platform
 from pathlib import Path
 
-# Add parent directory to Python path to allow imports
+# Add parent directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from edge_ai.config import Config
@@ -17,21 +18,33 @@ from edge_ai.utils.helpers import setup_logging
 def print_banner():
     """Print startup banner."""
     banner = """
-    ╔═══════════════════════════════════════════════════════════╗
-    ║                                                           ║
-    ║              EDGE AI COPILOT v1.0.0                       ║
-    ║         Autonomous Battlefield Edge AI Unit              ║
-    ║                                                           ║
-    ╚═══════════════════════════════════════════════════════════╝
+╔═══════════════════════════════════════════════════════════════════════╗
+║                                                                       ║
+║                    EDGE AI COPILOT v2.0.0                             ║
+║                                                                       ║
+║              Autonomous Battlefield Edge AI Unit                      ║
+║                   Raspberry Pi 4 Optimized                            ║
+║                                                                       ║
+╚═══════════════════════════════════════════════════════════════════════╝
     """
     print(banner)
 
 
 def print_system_info():
     """Print system information."""
-    print(f"    Platform: {platform.system()} {platform.release()}")
-    print(f"    Python: {platform.python_version()}")
-    print(f"    Architecture: {platform.machine()}")
+    print(f"    Platform     : {platform.system()} {platform.release()}")
+    print(f"    Python       : {platform.python_version()}")
+    print(f"    Architecture : {platform.machine()}")
+    
+    # Raspberry Pi detection
+    if Path("/proc/device-tree/model").exists():
+        try:
+            with open("/proc/device-tree/model", "r") as f:
+                pi_model = f.read().strip('\x00')
+                print(f"    Device       : {pi_model}")
+        except:
+            pass
+    
     print()
 
 
@@ -52,7 +65,7 @@ def validate_environment():
     
     # Check required packages
     required_packages = [
-        ('paho.mqtt', 'paho-mqtt'),
+        ('paho.mqtt.client', 'paho-mqtt'),
         ('llama_cpp', 'llama-cpp-python')
     ]
     
@@ -67,7 +80,8 @@ def validate_environment():
     
     if missing_packages:
         print(f"\n    Missing packages: {', '.join(missing_packages)}")
-        print(f"    Install with: pip install {' '.join(missing_packages)}")
+        print(f"\n    Run the setup script:")
+        print(f"      ./setup_and_run.sh")
         return False
     
     print()
@@ -84,7 +98,9 @@ def main():
     
     # Validate environment
     if not validate_environment():
-        print("    Environment validation failed. Exiting.")
+        print("    Environment validation failed.")
+        print("\n    Please run the setup script:")
+        print("      ./setup_and_run.sh")
         sys.exit(1)
     
     try:
@@ -95,6 +111,9 @@ def main():
         )
         
         # Log system information
+        logger.info("="*70)
+        logger.info("Edge AI Copilot Starting")
+        logger.info("="*70)
         logger.info(f"Platform: {platform.system()} {platform.release()}")
         logger.info(f"Python: {platform.python_version()}")
         logger.info(f"Architecture: {platform.machine()}")
@@ -106,15 +125,17 @@ def main():
         
         # Log configuration summary
         logger.info("Configuration Summary:")
-        logger.info(f"  MQTT Broker: {Config.MQTT_BROKER_HOST}:{Config.MQTT_BROKER_PORT}")
-        logger.info(f"  Sensor Topic: {Config.MQTT_TOPIC_SENSOR}")
-        logger.info(f"  Response Topic: {Config.MQTT_TOPIC_RESPONSE}")
-        logger.info(f"  Model: {Config.MODEL_PATH}")
-        logger.info(f"  Max Tokens: {Config.MAX_TOKENS}")
-        logger.info(f"  Temperature: {Config.TEMPERATURE}")
-        logger.info(f"  Threads: {Config.THREADS}")
+        logger.info(f"  MQTT Broker      : {Config.MQTT_BROKER_HOST}:{Config.MQTT_BROKER_PORT}")
+        logger.info(f"  Sensor Topic     : {Config.MQTT_TOPIC_SENSOR}")
+        logger.info(f"  Response Topic   : {Config.MQTT_TOPIC_RESPONSE}")
+        logger.info(f"  Model            : {Config.MODEL_PATH}")
+        logger.info(f"  Max Tokens       : {Config.MAX_TOKENS}")
+        logger.info(f"  Temperature      : {Config.TEMPERATURE}")
+        logger.info(f"  Threads          : {Config.THREADS}")
+        logger.info(f"  Inference Timeout: {Config.INFERENCE_TIMEOUT}s")
         logger.info(f"  Critical Distance: {Config.CRITICAL_DISTANCE}m")
         logger.info(f"  Stress Heart Rate: {Config.STRESS_HEART_RATE} bpm")
+        logger.info("="*70)
         
         # Initialize and start Edge AI Copilot
         copilot = EdgeAICopilot(Config)
@@ -123,17 +144,18 @@ def main():
         
     except FileNotFoundError as e:
         print(f"\n    ✗ Error: {e}")
-        print(f"    Please ensure the model file exists at: {Config.MODEL_PATH}")
-        print(f"    Download with:")
-        print(f"    wget https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf -O {Config.MODEL_PATH}")
+        print(f"\n    Model file not found: {Config.MODEL_PATH}")
+        print(f"\n    Run the setup script to download it:")
+        print(f"      ./setup_and_run.sh")
         sys.exit(1)
         
     except ValueError as e:
         print(f"\n    ✗ Configuration error: {e}")
+        print(f"\n    Please check config.py")
         sys.exit(1)
         
     except KeyboardInterrupt:
-        print("\n    Interrupted by user")
+        print("\n\n    Interrupted by user")
         sys.exit(0)
         
     except Exception as e:

@@ -1,6 +1,6 @@
 """
 Configuration management for Edge AI Copilot system.
-Centralizes all system parameters with validation.
+Centralized system parameters with validation.
 """
 import os
 from pathlib import Path
@@ -9,10 +9,10 @@ from pathlib import Path
 class Config:
     """Centralized configuration for Edge AI Copilot"""
     
-    # MQTT Settings
-    # Broker is running on the sender machine: 172.17.55.214
-    # Pi (this machine) IP: 172.17.4.43
-    MQTT_BROKER_HOST: str = "172.17.55.214"  # Sender's MQTT broker
+    # ============================================================================
+    # MQTT SETTINGS
+    # ============================================================================
+    MQTT_BROKER_HOST: str = "172.17.55.214"  # MQTT broker address
     MQTT_BROKER_PORT: int = 1883
     MQTT_TOPIC_SENSOR: str = "battlefield/sensor"
     MQTT_TOPIC_RESPONSE: str = "battlefield/ai-response"
@@ -21,30 +21,26 @@ class Config:
     MQTT_RECONNECT_DELAY: int = 5
     MQTT_MAX_RECONNECT_DELAY: int = 60
     
-    # AI Settings
+    # ============================================================================
+    # AI/LLM SETTINGS
+    # ============================================================================
     MODEL_PATH: str = "models/tinyllama.gguf"
-    MAX_TOKENS: int = 40
-    TEMPERATURE: float = 0.4
+    MAX_TOKENS: int = 50
+    TEMPERATURE: float = 0.5
     THREADS: int = 2
-    INFERENCE_TIMEOUT: int = 3
+    INFERENCE_TIMEOUT: int = 5
     MAX_DECISION_WORDS: int = 20
     
-    # Threat Analysis Thresholds
+    # ============================================================================
+    # THREAT ANALYSIS THRESHOLDS
+    # ============================================================================
     CRITICAL_DISTANCE: int = 100  # meters
     STRESS_HEART_RATE: int = 120  # bpm
     HOSTAGE_RISK_DISTANCE: int = 50  # meters
     
-    # TTS Settings
-    TTS_MODEL: str = "en_US-lessac-medium"
-    TTS_TIMEOUT: int = 2
-    
-    # Voice Input Settings
-    VOICE_INPUT_ENABLED: bool = False  # Disabled until audio is configured
-    WHISPER_MODEL: str = "base"  # tiny, base, small, medium, large
-    LISTENING_DURATION: int = 5  # seconds
-    ENABLE_WELCOME_MESSAGE: bool = False  # Disabled until audio is configured
-    
-    # Logging
+    # ============================================================================
+    # LOGGING
+    # ============================================================================
     LOG_DIR: str = "logs"
     LOG_RETENTION_DAYS: int = 7
     
@@ -59,7 +55,7 @@ class Config:
         if not model_path.exists():
             raise ValueError(
                 f"Model file not found at {cls.MODEL_PATH}. "
-                f"Please download the model first."
+                f"Run the setup script to download it."
             )
         
         # Validate numeric ranges

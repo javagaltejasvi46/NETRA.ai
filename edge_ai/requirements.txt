@@ -1,21 +1,7 @@
-# Edge AI Copilot Dependencies
+# Edge AI Copilot - Core Dependencies
 
 # MQTT Communication
 paho-mqtt>=1.6.1
 
 # LLM Inference
 llama-cpp-python>=0.2.0
-
-# Text-to-Speech
-piper-tts>=1.2.0
-
-# Speech Recognition
-openai-whisper>=20230314
-noisereduce>=3.0.0
-soundfile>=0.12.1
-
-# Audio Playback and Recording
-pygame>=2.5.0
-
-# Optional: For better performance on Raspberry Pi
-# Install with: CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" pip install llama-cpp-python --no-cache-dir
