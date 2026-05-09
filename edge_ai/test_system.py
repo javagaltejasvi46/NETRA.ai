@@ -59,7 +59,11 @@ def test_config():
     print_header("TEST 2: Configuration")
     
     try:
-        from edge_ai.config import Config
+        # Try importing from edge_ai package first, then from current directory
+        try:
+            from edge_ai.config import Config
+        except ImportError:
+            from config import Config
         
         print_info(f"MQTT Broker: {Config.MQTT_BROKER_HOST}:{Config.MQTT_BROKER_PORT}")
         print_info(f"Model Path: {Config.MODEL_PATH}")
@@ -80,7 +84,10 @@ def test_model_loading():
     
     try:
         from llama_cpp import Llama
-        from edge_ai.config import Config
+        try:
+            from edge_ai.config import Config
+        except ImportError:
+            from config import Config
         
         print_info(f"Loading model: {Config.MODEL_PATH}")
         start = time.time()
@@ -108,7 +115,10 @@ def test_inference():
     
     try:
         from llama_cpp import Llama
-        from edge_ai.config import Config
+        try:
+            from edge_ai.config import Config
+        except ImportError:
+            from config import Config
         
         # Load model
         llm = Llama(
@@ -170,9 +180,14 @@ def test_threat_analysis():
     print_header("TEST 5: Threat Analysis")
     
     try:
-        from edge_ai.ai.threat_analysis import ThreatAnalyzer
-        from edge_ai.mqtt.models import TelemetryData
-        from edge_ai.config import Config
+        try:
+            from edge_ai.ai.threat_analysis import ThreatAnalyzer
+            from edge_ai.mqtt.models import TelemetryData
+            from edge_ai.config import Config
+        except ImportError:
+            from ai.threat_analysis import ThreatAnalyzer
+            from mqtt.models import TelemetryData
+            from config import Config
         
         # Create test telemetry
         telemetry_dict = {
@@ -216,7 +231,10 @@ def test_mqtt_connection():
     
     try:
         import paho.mqtt.client as mqtt
-        from edge_ai.config import Config
+        try:
+            from edge_ai.config import Config
+        except ImportError:
+            from config import Config
         
         connected = [False]
         
