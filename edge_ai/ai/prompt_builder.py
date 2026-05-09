@@ -16,7 +16,7 @@ class PromptBuilder:
     Constructs compact prompts for LLM inference from telemetry and threat assessment.
     """
     
-    SYSTEM_INSTRUCTION = "You are a battlefield tactical AI. Provide one clear action command."
+    SYSTEM_INSTRUCTION = "You are a battlefield tactical AI. Give one clear tactical command in a complete sentence."
     MAX_CONTEXT_LENGTH = 200  # characters, excluding system instruction
     
     def build_prompt(self, telemetry: 'TelemetryData', 
@@ -49,8 +49,8 @@ class PromptBuilder:
             logger.warning(f"Context length {len(context)} exceeds limit, truncating")
             context = context[:self.MAX_CONTEXT_LENGTH]
         
-        # Combine system instruction with context
-        prompt = f"{self.SYSTEM_INSTRUCTION}\n{context}"
+        # Combine system instruction with context and explicit command request
+        prompt = f"{self.SYSTEM_INSTRUCTION}\n\nSituation: {context}\n\nCommand:"
         
         logger.debug(f"Built prompt: {prompt}")
         

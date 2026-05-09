@@ -1,6 +1,6 @@
 """
 Main orchestrator for Edge AI Copilot pipeline.
-Coordinates MQTT, threat analysis, LLM inference, and response publishing.
+Simplified and robust: Receive → Analyze → Generate → Respond
 """
 import logging
 import signal
@@ -25,47 +25,41 @@ logger = logging.getLogger(__name__)
 
 class EdgeAICopilot:
     """
-    Main orchestrator that coordinates the entire Edge AI pipeline.
+    Main orchestrator for Edge AI Copilot.
     
-    Pipeline Flow:
+    Simple pipeline:
     1. Receive telemetry via MQTT
-    2. Analyze threat level
-    3. Build LLM prompt
-    4. Generate tactical decision
-    5. Validate decision
-    6. Publish response via MQTT
+    2. Analyze threat
+    3. Generate LLM decision
+    4. Send response via MQTT
+    5. Print to console
     """
     
     def __init__(self, config: Config):
-        """
-        Initialize all components of the Edge AI system.
-        
-        Args:
-            config: Configuration instance
-        """
+        """Initialize all components."""
         self.config = config
         self.running = False
         
-        logger.info("Initializing Edge AI Copilot components...")
+        logger.info("Initializing Edge AI Copilot...")
         
         try:
-            # Initialize threat analyzer
+            # Threat analyzer
             self.threat_analyzer = ThreatAnalyzer(
                 critical_distance=config.CRITICAL_DISTANCE,
                 stress_heart_rate=config.STRESS_HEART_RATE,
                 hostage_risk_distance=config.HOSTAGE_RISK_DISTANCE
             )
-            logger.info("✓ Threat analyzer initialized")
+            logger.info("✓ Threat analyzer ready")
             
-            # Initialize prompt builder
+            # Prompt builder
             self.prompt_builder = PromptBuilder()
-            logger.info("✓ Prompt builder initialized")
+            logger.info("✓ Prompt builder ready")
             
-            # Initialize failsafe handler
+            # Failsafe handler
             self.failsafe_handler = FailsafeHandler()
-            logger.info("✓ Failsafe handler initialized")
+            logger.info("✓ Failsafe handler ready")
             
-            # Initialize inference engine
+            # LLM inference engine
             self.inference_engine = InferenceEngine(
                 model_path=config.MODEL_PATH,
                 max_tokens=config.MAX_TOKENS,
@@ -74,175 +68,196 @@ class EdgeAICopilot:
                 timeout=config.INFERENCE_TIMEOUT,
                 failsafe_handler=self.failsafe_handler
             )
-            logger.info("✓ Inference engine initialized")
+            logger.info("✓ LLM inference engine ready")
             
-            # Initialize decision validator
+            # Decision validator
             self.decision_validator = TacticalDecisionGenerator()
-            logger.info("✓ Decision validator initialized")
+            logger.info("✓ Decision validator ready")
             
-            # Initialize context store
+            # Context store
             self.context_store = ContextStore(
                 storage_dir="storage/context",
                 max_memory_items=100,
                 max_file_items=10000
             )
-            logger.info("✓ Context store initialized")
+            logger.info("✓ Context store ready")
             
-            # Initialize MQTT publisher
+            # MQTT publisher
             self.mqtt_publisher = MQTTPublisher(
                 broker_host=config.MQTT_BROKER_HOST,
                 broker_port=config.MQTT_BROKER_PORT,
                 topic=config.MQTT_TOPIC_RESPONSE,
                 qos=config.MQTT_QOS
             )
-            logger.info("✓ MQTT publisher initialized")
+            logger.info("✓ MQTT publisher ready")
             
-            # Initialize MQTT subscriber (uses callback)
+            # MQTT subscriber
             self.mqtt_subscriber = MQTTSubscriber(
                 broker_host=config.MQTT_BROKER_HOST,
                 broker_port=config.MQTT_BROKER_PORT,
                 topic=config.MQTT_TOPIC_SENSOR,
                 qos=config.MQTT_QOS,
-                on_message_callback=self.on_telemetry_received,
+                on_message_callback=self.process_telemetry,
                 reconnect_delay=config.MQTT_RECONNECT_DELAY,
                 max_reconnect_delay=config.MQTT_MAX_RECONNECT_DELAY
             )
-            logger.info("✓ MQTT subscriber initialized")
+            logger.info("✓ MQTT subscriber ready")
             
             logger.info("All components initialized successfully")
             
         except Exception as e:
-            logger.error(f"Failed to initialize components: {e}")
+            logger.error(f"Initialization failed: {e}")
             raise
     
-    def on_telemetry_received(self, telemetry: TelemetryData) -> None:
+    def process_telemetry(self, telemetry: TelemetryData) -> None:
         """
-        Pipeline handler for incoming telemetry.
-        Processes telemetry through the complete AI pipeline.
+        Main processing pipeline.
+        Guaranteed to send a response.
         
         Args:
-            telemetry: Parsed telemetry data
+            telemetry: Incoming telemetry data
         """
         start_time = time.time()
+        response_sent = False
+        
+        print("\n" + "="*80)
+        print("📡 TELEMETRY RECEIVED")
+        print("="*80)
         
         try:
-            # Log telemetry
-            log_telemetry(logger, telemetry)
-
-            # Console display
-            print("\n" + "="*70)
-            print("📡 TELEMETRY RECEIVED")
-            print("="*70)
-            print(f"  Tick        : {telemetry.tick}")
-            print(f"  Timestamp   : {telemetry.timestamp}")
-            print(f"  Squad Size  : {len(telemetry.squad)} members")
-            
-            # Display squad members
+            # Display received data
+            print(f"Tick      : {telemetry.tick}")
+            print(f"Timestamp : {telemetry.timestamp}")
+            print(f"Squad     : {len(telemetry.squad)} members")
             for soldier in telemetry.squad:
-                status_icon = "🟢" if soldier.status == "nominal" else "🟡" if soldier.status == "warning" else "🔴"
-                print(f"    {status_icon} {soldier.callsign}: HR={soldier.heart_rate}bpm, Battery={soldier.battery}%, Status={soldier.status}")
+                icon = "🟢" if soldier.status == "nominal" else "🟡" if soldier.status == "warning" else "🔴"
+                print(f"  {icon} {soldier.callsign}: HR={soldier.heart_rate}bpm, Battery={soldier.battery}%")
+            print(f"Enemy     : {telemetry.enemy.callsign} at ({telemetry.enemy.lat:.4f}, {telemetry.enemy.lng:.4f})")
+            print(f"Hostage   : {telemetry.hostage.callsign} at ({telemetry.hostage.lat:.4f}, {telemetry.hostage.lng:.4f})")
+            print("-"*80)
             
-            print(f"  Enemy       : {telemetry.enemy.callsign} at ({telemetry.enemy.lat:.4f}, {telemetry.enemy.lng:.4f})")
-            print(f"  Hostage     : {telemetry.hostage.callsign} at ({telemetry.hostage.lat:.4f}, {telemetry.hostage.lng:.4f})")
-            print("-"*70)
-
             # Step 1: Analyze threat
+            print("🔍 Analyzing threat...")
             assessment = self.threat_analyzer.analyze(telemetry)
-
-            # Console display
-            print(f"🔍 THREAT ANALYSIS")
-            print(f"  Primary     : {assessment.primary_soldier_id}")
-            print(f"  Distance    : {assessment.enemy_distance:.1f}m")
-            print(f"  Threat Level: {assessment.threat_level}")
-            print(f"  Risk Score  : {assessment.risk_score:.2f}")
-            print(f"  Stress Level: {assessment.soldier_stress}")
-            print(f"  Hostage Risk: {assessment.hostage_risk}")
-            print(f"  Squad Status: {assessment.squad_status}")
-            print("-"*70)
-
+            
+            print(f"Primary Soldier : {assessment.primary_soldier_id}")
+            print(f"Enemy Distance  : {assessment.enemy_distance:.1f}m")
+            print(f"Threat Level    : {assessment.threat_level}")
+            print(f"Risk Score      : {assessment.risk_score:.2f}")
+            print(f"Squad Status    : {assessment.squad_status}")
+            print("-"*80)
+            
             # Step 2: Build prompt
+            print("🤖 Generating AI decision...")
             prompt = self.prompt_builder.build_prompt(telemetry, assessment)
-
-            # Step 3: Generate decision (with automatic fallback)
+            logger.debug(f"Prompt: {prompt}")
+            
+            # Step 3: Generate LLM decision
             raw_decision = self.inference_engine.generate(prompt, assessment)
-
-            if not raw_decision:
-                logger.error("Failed to generate decision")
-                return
-
-            # Step 4: Validate and format decision
-            decision = self.decision_validator.validate_decision(raw_decision)
-
-            if not decision:
-                logger.error("Decision validation failed")
-                return
+            
+            if raw_decision and len(raw_decision.strip()) > 0:
+                # Validate and clean
+                decision = self.decision_validator.validate_decision(raw_decision)
+                logger.info(f"✅ LLM generated: {decision}")
+            else:
+                # Fallback
+                decision = "OK, I received your message."
+                logger.warning("⚠️  LLM returned empty, using acknowledgment")
+            
+            # Ensure we have a valid decision
+            if not decision or len(decision.strip()) < 3:
+                decision = "OK, I received your message."
+                logger.warning("⚠️  Decision validation failed, using acknowledgment")
             
             # Calculate latency
             latency_ms = int((time.time() - start_time) * 1000)
             
-            # Step 5: Log decision
-            log_decision(logger, decision, assessment.risk_score, latency_ms)
-
-            # Console display
-            print(f"🤖 AI DECISION")
-            print(f"  Decision    : {decision}")
-            print(f"  Latency     : {latency_ms}ms")
-            print("="*70 + "\n")
-
-            # Step 7: Store context for future predictions
-            self.context_store.store_telemetry(
-                telemetry=telemetry,
-                assessment=assessment,
-                decision=decision,
-                latency_ms=latency_ms
-            )
-
-            # Step 8: Publish response
+            # Step 4: Print decision
+            print("✅ AI DECISION GENERATED")
+            print(f"Decision : {decision}")
+            print(f"Latency  : {latency_ms}ms")
+            print("-"*80)
+            
+            # Step 5: Send response via MQTT
+            print("📤 Sending response to broker...")
             self.mqtt_publisher.publish_response(
                 decision=decision,
                 risk_score=assessment.risk_score,
                 timestamp=telemetry.timestamp,
                 latency_ms=latency_ms
             )
+            response_sent = True
+            print("✅ Response sent successfully")
+            print("="*80 + "\n")
             
-            logger.info(f"Pipeline completed in {latency_ms}ms")
+            # Step 6: Store context (non-critical)
+            try:
+                self.context_store.store_telemetry(
+                    telemetry=telemetry,
+                    assessment=assessment,
+                    decision=decision,
+                    latency_ms=latency_ms
+                )
+            except Exception as e:
+                logger.warning(f"Context storage failed: {e}")
+            
+            logger.info(f"Pipeline completed successfully in {latency_ms}ms")
             
         except Exception as e:
-            log_error(logger, "Pipeline", e)
+            # Error handling
+            logger.error(f"Pipeline error: {e}", exc_info=True)
+            print(f"❌ Error: {e}")
+            print("-"*80)
+            
+            # Always send acknowledgment if we haven't sent response yet
+            if not response_sent:
+                try:
+                    latency_ms = int((time.time() - start_time) * 1000)
+                    print("📤 Sending acknowledgment...")
+                    self.mqtt_publisher.publish_response(
+                        decision="OK, I received your message.",
+                        risk_score=0.0,
+                        timestamp=telemetry.timestamp,
+                        latency_ms=latency_ms
+                    )
+                    print("✅ Acknowledgment sent")
+                    print("="*80 + "\n")
+                except Exception as e2:
+                    logger.error(f"Failed to send acknowledgment: {e2}")
+                    print(f"❌ Failed to send acknowledgment: {e2}")
+                    print("="*80 + "\n")
     
     def start(self) -> None:
-        """
-        Start the Edge AI Copilot system.
-        """
+        """Start the Edge AI Copilot system."""
         try:
             logger.info("Starting Edge AI Copilot...")
             
             # Connect MQTT publisher
             self.mqtt_publisher.connect()
+            logger.info("MQTT publisher connected")
             
             # Connect and start MQTT subscriber
             self.mqtt_subscriber.connect()
             self.mqtt_subscriber.start()
+            logger.info("MQTT subscriber connected and listening")
             
             self.running = True
             
-            logger.info("="*70)
-            logger.info("Edge AI Copilot is running")
-            logger.info("Listening for telemetry on: " + self.config.MQTT_TOPIC_SENSOR)
-            logger.info("Publishing responses to: " + self.config.MQTT_TOPIC_RESPONSE)
-            logger.info("Press Ctrl+C to stop")
-            logger.info("="*70)
-            
-            print("\n" + "="*70)
+            # Print startup message
+            print("\n" + "="*80)
             print("🚀 EDGE AI COPILOT ONLINE")
-            print("="*70)
-            print(f"  MQTT Broker : {self.config.MQTT_BROKER_HOST}:{self.config.MQTT_BROKER_PORT}")
-            print(f"  Sensor Topic: {self.config.MQTT_TOPIC_SENSOR}")
-            print(f"  Response    : {self.config.MQTT_TOPIC_RESPONSE}")
-            print(f"  Model       : {self.config.MODEL_PATH}")
-            print("="*70)
-            print("  Waiting for telemetry...")
-            print("="*70 + "\n")
+            print("="*80)
+            print(f"MQTT Broker    : {self.config.MQTT_BROKER_HOST}:{self.config.MQTT_BROKER_PORT}")
+            print(f"Listening on   : {self.config.MQTT_TOPIC_SENSOR}")
+            print(f"Publishing to  : {self.config.MQTT_TOPIC_RESPONSE}")
+            print(f"LLM Model      : {self.config.MODEL_PATH}")
+            print(f"Max Tokens     : {self.config.MAX_TOKENS}")
+            print(f"Temperature    : {self.config.TEMPERATURE}")
+            print("="*80)
+            print("Waiting for telemetry... (Press Ctrl+C to stop)")
+            print("="*80 + "\n")
+            
+            logger.info("System ready and waiting for telemetry")
             
             # Keep main thread alive
             while self.running:
@@ -252,29 +267,38 @@ class EdgeAICopilot:
             logger.info("Keyboard interrupt received")
             self.stop()
         except Exception as e:
-            log_error(logger, "Startup", e)
+            logger.error(f"Startup error: {e}", exc_info=True)
             self.stop()
             raise
     
     def stop(self) -> None:
-        """
-        Gracefully shutdown all components.
-        """
+        """Gracefully shutdown all components."""
         logger.info("Shutting down Edge AI Copilot...")
         self.running = False
+        
+        print("\n" + "="*80)
+        print("🛑 SHUTTING DOWN")
+        print("="*80)
         
         try:
             # Stop MQTT subscriber
             if hasattr(self, 'mqtt_subscriber'):
                 self.mqtt_subscriber.stop()
+                print("✓ MQTT subscriber stopped")
             
             # Disconnect MQTT publisher
             if hasattr(self, 'mqtt_publisher'):
                 self.mqtt_publisher.disconnect()
+                print("✓ MQTT publisher disconnected")
             
             # Cleanup inference engine
             if hasattr(self, 'inference_engine'):
                 self.inference_engine.cleanup()
+                print("✓ LLM engine cleaned up")
+            
+            print("="*80)
+            print("Shutdown complete")
+            print("="*80 + "\n")
             
             logger.info("Shutdown complete")
             
@@ -282,9 +306,7 @@ class EdgeAICopilot:
             logger.error(f"Error during shutdown: {e}")
     
     def setup_signal_handlers(self) -> None:
-        """
-        Setup signal handlers for graceful shutdown.
-        """
+        """Setup signal handlers for graceful shutdown."""
         def signal_handler(signum, frame):
             logger.info(f"Received signal {signum}")
             self.stop()

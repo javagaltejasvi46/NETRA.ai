@@ -89,24 +89,40 @@ class InferenceEngine:
             return None
         
         try:
-            logger.debug(f"Running inference with prompt: {prompt[:100]}...")
+            logger.info(f"Running inference with prompt: {prompt}")
             
-            # Execute inference
+            # Execute inference with better parameters
             output = self.model(
                 prompt,
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
-                top_p=0.9,
-                repeat_penalty=1.1,
-                stop=["\n", ".", "!"],  # Stop at sentence end
+                top_p=0.95,
+                top_k=40,
+                repeat_penalty=1.15,
+                stop=["\n\n", "###"],  # Less aggressive stop tokens
                 echo=False
             )
             
             # Extract generated text
             if output and 'choices' in output and len(output['choices']) > 0:
                 text = output['choices'][0]['text'].strip()
-                logger.info(f"Generated decision: {text}")
-                return text
+                
+                # Clean up the text - remove any trailing incomplete sentences
+                if text:
+                    # If text doesn't end with punctuation, try to find last complete sentence
+                    if not text[-1] in '.!?':
+                        # Find last sentence-ending punctuation
+                        last_period = max(text.rfind('.'), text.rfind('!'), text.rfind('?'))
+                        if last_period > 0:
+                            text = text[:last_period + 1]
+                    
+                    logger.info(f"Generated decision: {text}")
+                    return text
+                else:
+                    logger.warning("Model generated empty text")
+                    if self.failsafe_handler and assessment:
+                        return self.failsafe_handler.generate_fallback(assessment)
+                    return None
             else:
                 logger.warning("No output generated from model")
                 if self.failsafe_handler and assessment:
