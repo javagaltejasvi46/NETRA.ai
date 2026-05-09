@@ -50,7 +50,11 @@ class MQTTPublisher:
             self._connected = False  # Don't raise — let system continue
     
     def publish_response(self, decision: str, risk_score: float, 
-                        timestamp: int, latency_ms: int = 0) -> bool:
+                        timestamp: int, latency_ms: int = 0,
+                        replying_to_unit: str = None,
+                        replying_to_message: str = None,
+                        original_timestamp: int = None,
+                        threat_level: str = "unknown") -> bool:
         """
         Publish tactical decision to dashboard.
         
@@ -59,6 +63,10 @@ class MQTTPublisher:
             risk_score: Computed risk score (0.0 to 1.0)
             timestamp: Unix timestamp
             latency_ms: Processing latency in milliseconds
+            replying_to_unit: Unit being replied to (if voice message present)
+            replying_to_message: Original message being replied to
+            original_timestamp: Timestamp of original voice message
+            threat_level: Threat level assessment
             
         Returns:
             True if published successfully, False otherwise
@@ -67,13 +75,26 @@ class MQTTPublisher:
             logger.error("Publisher not connected to broker")
             return False
         
-        # Construct JSON payload
+        # Construct JSON payload with new format
         payload = {
-            "decision": decision,
-            "risk_score": round(risk_score, 2),
             "timestamp": timestamp,
-            "latency_ms": latency_ms
+            "source": "NETRA-EdgeAI",
+            "type": "ai_response",
+            "decision": decision,
+            "context": {
+                "risk_score": round(risk_score, 2),
+                "threat_level": threat_level,
+                "latency_ms": latency_ms
+            }
         }
+        
+        # Add voice message context if present
+        if replying_to_unit:
+            payload["context"]["replying_to_unit"] = replying_to_unit
+        if replying_to_message:
+            payload["context"]["replying_to_message"] = replying_to_message
+        if original_timestamp:
+            payload["context"]["original_timestamp"] = original_timestamp
         
         payload_json = json.dumps(payload)
         

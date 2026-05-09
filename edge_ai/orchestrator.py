@@ -134,6 +134,15 @@ class EdgeAICopilot:
                 print(f"  {icon} {soldier.callsign}: HR={soldier.heart_rate}bpm, Battery={soldier.battery}%")
             print(f"Enemy     : {telemetry.enemy.callsign} at ({telemetry.enemy.lat:.4f}, {telemetry.enemy.lng:.4f})")
             print(f"Hostage   : {telemetry.hostage.callsign} at ({telemetry.hostage.lat:.4f}, {telemetry.hostage.lng:.4f})")
+            
+            # Display voice message if present
+            if telemetry.voice_message:
+                print("-"*80)
+                print(f"🎤 VOICE MESSAGE")
+                print(f"From      : {telemetry.voice_message.unit}")
+                print(f"Message   : \"{telemetry.voice_message.message}\"")
+                print(f"Source    : {telemetry.voice_message.source}")
+            
             print("-"*80)
             
             # Step 1: Analyze threat
@@ -180,14 +189,35 @@ class EdgeAICopilot:
             
             # Step 5: Send response via MQTT
             print("📤 Sending response to broker...")
+            
+            # Prepare voice message context if present
+            replying_to_unit = None
+            replying_to_message = None
+            original_timestamp = None
+            
+            if telemetry.voice_message:
+                replying_to_unit = telemetry.voice_message.unit
+                replying_to_message = telemetry.voice_message.message
+                original_timestamp = telemetry.voice_message.timestamp
+            
             self.mqtt_publisher.publish_response(
                 decision=decision,
                 risk_score=assessment.risk_score,
                 timestamp=telemetry.timestamp,
-                latency_ms=latency_ms
+                latency_ms=latency_ms,
+                replying_to_unit=replying_to_unit,
+                replying_to_message=replying_to_message,
+                original_timestamp=original_timestamp,
+                threat_level=assessment.threat_level
             )
             response_sent = True
             print("✅ Response sent successfully")
+            
+            # Display response details
+            if replying_to_unit:
+                print(f"   Replying to: {replying_to_unit}")
+                print(f"   Original msg: \"{replying_to_message}\"")
+            
             print("="*80 + "\n")
             
             # Step 6: Store context (non-critical)
@@ -214,11 +244,26 @@ class EdgeAICopilot:
                 try:
                     latency_ms = int((time.time() - start_time) * 1000)
                     print("📤 Sending acknowledgment...")
+                    
+                    # Prepare voice message context if present
+                    replying_to_unit = None
+                    replying_to_message = None
+                    original_timestamp = None
+                    
+                    if telemetry.voice_message:
+                        replying_to_unit = telemetry.voice_message.unit
+                        replying_to_message = telemetry.voice_message.message
+                        original_timestamp = telemetry.voice_message.timestamp
+                    
                     self.mqtt_publisher.publish_response(
                         decision="OK, I received your message.",
                         risk_score=0.0,
                         timestamp=telemetry.timestamp,
-                        latency_ms=latency_ms
+                        latency_ms=latency_ms,
+                        replying_to_unit=replying_to_unit,
+                        replying_to_message=replying_to_message,
+                        original_timestamp=original_timestamp,
+                        threat_level="unknown"
                     )
                     print("✅ Acknowledgment sent")
                     print("="*80 + "\n")

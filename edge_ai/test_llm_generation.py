@@ -20,7 +20,7 @@ from edge_ai.ai.decision_validator import TacticalDecisionGenerator
 
 # Sample telemetry payload
 SAMPLE_PAYLOAD = {
-    "timestamp": 1732452123456,
+    "timestamp": 1715247600000,
     "tick": 47,
     "squad": [
         {
@@ -28,18 +28,18 @@ SAMPLE_PAYLOAD = {
             "callsign": "ALPHA-1",
             "lat": 12.9795,
             "lng": 77.5925,
-            "heartRate": 85,
+            "heartRate": 86,
             "battery": 89.9,
             "status": "nominal"
         },
         {
-            "id": "bravo",
-            "callsign": "BRAVO-2",
-            "lat": 12.9793,
-            "lng": 77.5923,
-            "heartRate": 110,
-            "battery": 75.0,
-            "status": "warning"
+            "id": "charlie",
+            "callsign": "CHARLIE-3",
+            "lat": 12.9792,
+            "lng": 77.5928,
+            "heartRate": 77,
+            "battery": 88.6,
+            "status": "nominal"
         }
     ],
     "enemy": {
@@ -51,6 +51,12 @@ SAMPLE_PAYLOAD = {
         "callsign": "VICTIM-1",
         "lat": 12.9793,
         "lng": 77.5930
+    },
+    "voiceMessage": {
+        "unit": "ALPHA-1",
+        "message": "Cover me I'm moving",
+        "timestamp": 1715247595000,
+        "source": "dashboard"
     }
 }
 
@@ -81,6 +87,8 @@ def test_llm_generation():
     print(f"   Tick: {telemetry.tick}")
     print(f"   Squad: {len(telemetry.squad)} members")
     print(f"   Primary: {telemetry.squad[0].callsign}")
+    if telemetry.voice_message:
+        print(f"   Voice message: \"{telemetry.voice_message.message}\" from {telemetry.voice_message.unit}")
     
     # Step 2: Analyze threat
     print_section("STEP 2: Analyze Threat")

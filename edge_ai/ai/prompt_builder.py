@@ -42,6 +42,12 @@ class PromptBuilder:
             f"Hostage: {assessment.hostage_risk.lower()} risk.",
         ]
         
+        # Add voice message if present
+        if telemetry.voice_message:
+            context_parts.append(
+                f"{telemetry.voice_message.unit} says: \"{telemetry.voice_message.message}\""
+            )
+        
         context = " ".join(context_parts)
         
         # Enforce length limit
@@ -50,7 +56,11 @@ class PromptBuilder:
             context = context[:self.MAX_CONTEXT_LENGTH]
         
         # Combine system instruction with context and explicit command request
-        prompt = f"{self.SYSTEM_INSTRUCTION}\n\nSituation: {context}\n\nCommand:"
+        # If there's a voice message, instruct to respond to that unit
+        if telemetry.voice_message:
+            prompt = f"{self.SYSTEM_INSTRUCTION}\n\nSituation: {context}\n\nRespond directly to {telemetry.voice_message.unit}:"
+        else:
+            prompt = f"{self.SYSTEM_INSTRUCTION}\n\nSituation: {context}\n\nCommand:"
         
         logger.debug(f"Built prompt: {prompt}")
         

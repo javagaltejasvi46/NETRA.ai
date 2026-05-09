@@ -40,6 +40,15 @@ class Hostage:
 
 
 @dataclass
+class VoiceMessage:
+    """Represents a voice message from a unit"""
+    unit: str
+    message: str
+    timestamp: int
+    source: str
+
+
+@dataclass
 class TelemetryData:
     """
     Represents battlefield telemetry data received via MQTT.
@@ -70,6 +79,12 @@ class TelemetryData:
         "status": "unknown",
         "lat": 12.9796,
         "lng": 77.5928
+      },
+      "voiceMessage": {
+        "unit": "ALPHA-1",
+        "message": "Cover me I'm moving",
+        "timestamp": 1715247595000,
+        "source": "dashboard"
       }
     }
     """
@@ -78,6 +93,7 @@ class TelemetryData:
     squad: List[SquadMember]
     enemy: Enemy
     hostage: Hostage
+    voice_message: Optional[VoiceMessage] = None
     
     # Computed fields for backward compatibility
     soldier: dict = None  # Primary soldier (first squad member)
@@ -143,13 +159,29 @@ class TelemetryData:
                 logger.error(f"Invalid hostage data: {e}")
                 return None
 
+            # Parse voice message (optional)
+            voice_message = None
+            if 'voiceMessage' in data:
+                try:
+                    voice_message = VoiceMessage(
+                        unit=data['voiceMessage']['unit'],
+                        message=data['voiceMessage']['message'],
+                        timestamp=int(data['voiceMessage']['timestamp']),
+                        source=data['voiceMessage']['source']
+                    )
+                    logger.info(f"Voice message from {voice_message.unit}: {voice_message.message}")
+                except (KeyError, ValueError) as e:
+                    logger.warning(f"Invalid voice message data: {e}")
+                    # Continue without voice message
+
             # Create telemetry object
             telemetry = TelemetryData(
                 tick=int(data['tick']),
                 timestamp=int(data['timestamp']),
                 squad=squad_members,
                 enemy=enemy,
-                hostage=hostage
+                hostage=hostage,
+                voice_message=voice_message
             )
             
             # Create soldier dict for backward compatibility (use first squad member)

@@ -17,7 +17,7 @@ from edge_ai.config import Config
 # Sample telemetry payloads
 SAMPLE_PAYLOADS = [
     {
-        "timestamp": 1732452123456,
+        "timestamp": 1715247600000,
         "tick": 47,
         "squad": [
             {
@@ -25,7 +25,7 @@ SAMPLE_PAYLOADS = [
                 "callsign": "ALPHA-1",
                 "lat": 12.9795,
                 "lng": 77.5925,
-                "heartRate": 85,
+                "heartRate": 86,
                 "battery": 89.9,
                 "status": "nominal"
             }
@@ -39,10 +39,16 @@ SAMPLE_PAYLOADS = [
             "callsign": "VICTIM-1",
             "lat": 12.9793,
             "lng": 77.5930
+        },
+        "voiceMessage": {
+            "unit": "ALPHA-1",
+            "message": "Cover me I'm moving",
+            "timestamp": 1715247595000,
+            "source": "dashboard"
         }
     },
     {
-        "timestamp": 1732452124456,
+        "timestamp": 1715247610000,
         "tick": 48,
         "squad": [
             {
@@ -73,10 +79,16 @@ SAMPLE_PAYLOADS = [
             "callsign": "VICTIM-1",
             "lat": 12.9793,
             "lng": 77.5930
+        },
+        "voiceMessage": {
+            "unit": "BRAVO-2",
+            "message": "Enemy spotted moving towards hostage",
+            "timestamp": 1715247608000,
+            "source": "dashboard"
         }
     },
     {
-        "timestamp": 1732452125456,
+        "timestamp": 1715247620000,
         "tick": 49,
         "squad": [
             {
@@ -127,10 +139,22 @@ def on_message(client, userdata, msg):
     try:
         response = json.loads(msg.payload.decode())
         print("\nParsed Response:")
+        print(f"  Source     : {response.get('source', 'N/A')}")
+        print(f"  Type       : {response.get('type', 'N/A')}")
         print(f"  Decision   : {response.get('decision', 'N/A')}")
-        print(f"  Risk Score : {response.get('risk_score', 'N/A')}")
         print(f"  Timestamp  : {response.get('timestamp', 'N/A')}")
-        print(f"  Latency    : {response.get('latency_ms', 'N/A')}ms")
+        
+        context = response.get('context', {})
+        print(f"\nContext:")
+        print(f"  Risk Score : {context.get('risk_score', 'N/A')}")
+        print(f"  Threat     : {context.get('threat_level', 'N/A')}")
+        print(f"  Latency    : {context.get('latency_ms', 'N/A')}ms")
+        
+        if 'replying_to_unit' in context:
+            print(f"\nReplying To:")
+            print(f"  Unit       : {context.get('replying_to_unit', 'N/A')}")
+            print(f"  Message    : \"{context.get('replying_to_message', 'N/A')}\"")
+            print(f"  Original TS: {context.get('original_timestamp', 'N/A')}")
     except:
         pass
     
@@ -183,6 +207,8 @@ def main():
                 print(f"✅ Payload {i} sent successfully")
                 print(f"   Tick: {payload['tick']}")
                 print(f"   Squad: {len(payload['squad'])} members")
+                if 'voiceMessage' in payload:
+                    print(f"   Voice: \"{payload['voiceMessage']['message']}\" from {payload['voiceMessage']['unit']}")
                 print(f"   Enemy distance: ~{payload['enemy']['lat'] - payload['squad'][0]['lat']:.4f}° lat")
             else:
                 print(f"❌ Failed to send payload {i}")
