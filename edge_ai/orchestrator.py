@@ -120,6 +120,8 @@ class EdgeAICopilot:
         """
         start_time = time.time()
         response_sent = False
+        decision = None
+        latency_ms = 0
         
         print("\n" + "="*80)
         print("📡 TELEMETRY RECEIVED")
@@ -200,18 +202,20 @@ class EdgeAICopilot:
             
             print("="*80 + "\n")
             
-            # Step 6: Store context (non-critical)
-            try:
-                self.context_store.store_telemetry(
-                    telemetry=telemetry,
-                    assessment=assessment,
-                    decision=decision,
-                    latency_ms=latency_ms
-                )
-            except Exception as e:
-                logger.warning(f"Context storage failed: {e}")
-            
-            logger.info(f"Pipeline completed successfully in {latency_ms}ms")
+            # Step 6: Store context (non-critical, only if pipeline ran fully)
+            if decision is not None:
+                try:
+                    self.context_store.store_telemetry(
+                        telemetry=telemetry,
+                        assessment=assessment,
+                        decision=decision,
+                        latency_ms=latency_ms
+                    )
+                except Exception as e:
+                    logger.warning(f"Context storage failed: {e}")
+
+            elapsed_ms = int((time.time() - start_time) * 1000)
+            logger.info(f"Pipeline completed successfully in {elapsed_ms}ms")
             
         except Exception as e:
             # Error handling
