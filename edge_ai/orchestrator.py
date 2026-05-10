@@ -126,141 +126,77 @@ class EdgeAICopilot:
         print("="*80)
         
         try:
-            # Display RAW JSON payload first
-            print("📥 RAW PAYLOAD:")
+            # Display RAW JSON payload
+            print("📥 INCOMING PAYLOAD:")
             print(raw_payload)
             print()
-            print("-"*80)
-            
-            # Display received data with complete formatting
-            print(f"📊 TELEMETRY DATA")
-            print(f"Tick      : {telemetry.tick}")
-            print(f"Timestamp : {telemetry.timestamp}")
-            print(f"Environment: {telemetry.environment}")
-            print()
-            
-            print(f"👥 SQUAD ({len(telemetry.squad)} members)")
-            for i, soldier in enumerate(telemetry.squad, 1):
-                icon = "🟢" if soldier.status == "nominal" else "🟡" if soldier.status == "warning" else "🔴"
-                print(f"  {i}. {icon} {soldier.callsign} (ID: {soldier.id})")
-                print(f"     Status   : {soldier.status}")
-                print(f"     Position : ({soldier.lat:.6f}, {soldier.lng:.6f})")
-                print(f"     Heart Rate: {soldier.heart_rate} bpm")
-                print(f"     Battery  : {soldier.battery}%")
-                if i < len(telemetry.squad):
-                    print()
-            
-            print()
-            print(f"⚠️  ENEMY")
-            print(f"  Callsign : {telemetry.enemy.callsign}")
-            print(f"  Position : ({telemetry.enemy.lat:.6f}, {telemetry.enemy.lng:.6f})")
-            
-            print()
-            print(f"🆘 HOSTAGE")
-            print(f"  Callsign : {telemetry.hostage.callsign}")
-            print(f"  Position : ({telemetry.hostage.lat:.6f}, {telemetry.hostage.lng:.6f})")
-            if hasattr(telemetry.hostage, 'status'):
-                print(f"  Status   : {telemetry.hostage.status}")
             
             # Display voice message if present
             if telemetry.voice_message is not None:
+                print("🎤 VOICE MESSAGE:")
+                print(f"\"{telemetry.voice_message.message}\" - {telemetry.voice_message.unit}")
                 print()
-                print(f"🎤 VOICE MESSAGE")
-                print(f"  From     : {telemetry.voice_message.unit}")
-                print(f"  Message  : \"{telemetry.voice_message.message}\"")
-                print(f"  Source   : {telemetry.voice_message.source}")
-                print(f"  Timestamp: {telemetry.voice_message.timestamp}")
-            else:
-                logger.debug("No voice message in telemetry")
             
-            print("-"*80)
-            
-            # Step 1: Analyze threat
-            print("🔍 THREAT ANALYSIS")
+            # Analyze threat
             assessment = self.threat_analyzer.analyze(telemetry)
             
-            print(f"Primary Soldier    : {assessment.primary_soldier_id}")
-            print(f"Enemy Distance     : {assessment.enemy_distance:.1f}m")
-            print(f"Hostage Distance   : {assessment.hostage_distance:.1f}m (from primary)")
-            print(f"Threat Level       : {assessment.threat_level}")
-            print(f"Risk Score         : {assessment.risk_score:.2f}")
-            print(f"Squad Status       : {assessment.squad_status}")
-            print(f"Hostage Risk       : {assessment.hostage_risk}")
-            print(f"Stress Level       : {'HIGH' if assessment.high_stress else 'NORMAL'}")
-            print("-"*80)
-            
-            # Step 2: Build prompt
-            if telemetry.voice_message:
-                print(f"🤖 PROCESSING VOICE COMMAND")
-                print(f"Command from {telemetry.voice_message.unit}: \"{telemetry.voice_message.message}\"")
-            else:
-                print(f"🤖 GENERATING TACTICAL GUIDANCE")
-            
-            prompt = self.prompt_builder.build_prompt(telemetry, assessment, context_store=self.context_store)
-            # Don't print prompt to console - too verbose
-            logger.debug(f"Prompt length: {len(prompt)} characters")
-            
-            # Step 3: Generate LLM decision
-            raw_decision = self.inference_engine.generate(prompt, assessment)
-            
-            if raw_decision and len(raw_decision.strip()) > 0:
-                # Validate and clean
-                decision = self.decision_validator.validate_decision(raw_decision)
-                logger.info(f"✅ LLM generated: {decision}")
-            else:
-                # Fallback
-                if telemetry.voice_message:
-                    decision = f"Roger {telemetry.voice_message.unit}, message received."
-                else:
-                    decision = "Maintain current position and monitor."
-                logger.warning("⚠️  LLM returned empty, using acknowledgment")
-            
-            # Ensure we have a valid decision
-            if not decision or len(decision.strip()) < 3:
-                if telemetry.voice_message:
-                    decision = f"Roger {telemetry.voice_message.unit}, message received."
-                else:
-                    decision = "Maintain current position and monitor."
-                logger.warning("⚠️  Decision validation failed, using acknowledgment")
-            
-            # Calculate latency
-            latency_ms = int((time.time() - start_time) * 1000)
-            
-            # Step 4: Print decision
+            # Display threat analysis
+            print("🔍 THREAT ANALYSIS:")
+            print(f"Primary Soldier: {assessment.primary_soldier_id}")
+            print(f"Enemy Distance: {assessment.enemy_distance:.1f}m")
+            print(f"Threat Level: {assessment.threat_level}")
+            print(f"Risk Score: {assessment.risk_score:.2f}")
             print()
-            print("✅ AI RESPONSE")
-            if telemetry.voice_message:
-                print(f"To       : {telemetry.voice_message.unit}")
-            print(f"Decision : {decision}")
-            print(f"Latency  : {latency_ms}ms")
-            print("-"*80)
             
-            # Step 5: Send response via MQTT ONLY if there's a voice message
-            if telemetry.voice_message and telemetry.voice_message.message:
-                print("📤 Sending response to broker...")
+            # Generate LLM response (only if voice message present)
+            if telemetry.voice_message:
+                prompt = self.prompt_builder.build_prompt(telemetry, assessment, context_store=None)
+                # Don't print prompt - only log size
+                logger.debug(f"Prompt length: {len(prompt)} characters")
                 
-                # Prepare voice message context
-                replying_to_unit = telemetry.voice_message.unit
-                replying_to_message = telemetry.voice_message.message
-                original_timestamp = telemetry.voice_message.timestamp
+                # Generate LLM decision
+                raw_decision = self.inference_engine.generate(prompt, assessment)
+                
+                if raw_decision and len(raw_decision.strip()) > 0:
+                    # Validate and clean
+                    decision = self.decision_validator.validate_decision(raw_decision)
+                    logger.info(f"✅ LLM generated: {decision}")
+                else:
+                    # Fallback
+                    decision = f"Roger {telemetry.voice_message.unit}, message received."
+                    logger.warning("⚠️  LLM returned empty, using acknowledgment")
+                
+                # Ensure we have a valid decision
+                if not decision or len(decision.strip()) < 3:
+                    decision = f"Roger {telemetry.voice_message.unit}, message received."
+                    logger.warning("⚠️  Decision validation failed, using acknowledgment")
+                
+                # Calculate latency
+                latency_ms = int((time.time() - start_time) * 1000)
+                
+                # Display AI response
+                print("🤖 AI RESPONSE:")
+                print(f"{decision}")
+                print(f"Latency: {latency_ms}ms")
+                print()
+                
+                # Send response via MQTT
+                print("📤 Sending response to broker...")
                 
                 self.mqtt_publisher.publish_response(
                     decision=decision,
                     risk_score=assessment.risk_score,
                     timestamp=telemetry.timestamp,
                     latency_ms=latency_ms,
-                    replying_to_unit=replying_to_unit,
-                    replying_to_message=replying_to_message,
-                    original_timestamp=original_timestamp,
+                    replying_to_unit=telemetry.voice_message.unit,
+                    replying_to_message=telemetry.voice_message.message,
+                    original_timestamp=telemetry.voice_message.timestamp,
                     threat_level=assessment.threat_level
                 )
                 response_sent = True
                 print("✅ Response sent successfully")
-                print(f"   Replying to: {replying_to_unit}")
-                print(f"   Original msg: \"{replying_to_message}\"")
             else:
-                print("ℹ️  No voice message - response not sent to broker")
-                logger.info("No voice message present, skipping MQTT response")
+                print("ℹ️  No voice message - no response generated")
             
             print("="*80 + "\n")
             

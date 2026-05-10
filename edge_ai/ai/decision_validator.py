@@ -23,7 +23,7 @@ class TacticalDecisionGenerator:
         "appears", "seems", "looks like", "probably"
     ]
     
-    MAX_WORDS = 20  # Strict 20-word limit for tactical responses
+    MAX_WORDS = 25  # Allow up to 25 words for intelligent Q&A responses
     
     def validate_decision(self, raw_output: str) -> str:
         """

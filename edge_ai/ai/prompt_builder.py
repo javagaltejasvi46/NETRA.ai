@@ -16,80 +16,94 @@ class PromptBuilder:
     Constructs compact prompts for LLM inference from telemetry and threat assessment.
     """
     
-    SYSTEM_INSTRUCTION = """Battlefield tactical AI. Analyze and respond in under 15 words.
+    SYSTEM_INSTRUCTION = """You are a battlefield tactical AI. Answer questions based on current battlefield data.
 
-Rules:
-- Military radio style
-- Direct and tactical
-- No explanations
-- Actionable only
+Response rules:
+- Answer the question directly
+- Use military radio style
+- Keep under 20 words
+- Be precise with numbers
+- Reference specific units by callsign
+- Mention critical conditions (high HR, low battery, injuries)
 
 Examples:
-"Enemy east. Take cover."
-"Battery low. RTB soon."
-"Heart rate high. Slow down."
-"Hostage near. Hold fire."
+Q: "What is status of ALPHA-1?" → "ALPHA-1 nominal. HR 86 normal. Battery 89% good."
+Q: "Status of BRAVO-2?" → "BRAVO-2 warning. HR 145 critical high stress. Battery 25% critical RTB."
+Q: "How near is enemy?" → "Enemy 78 meters northeast."
+Q: "Cover me I'm moving" → "Roger. Enemy 78m. Move to cover."
+Q: "Battery status?" → "ALPHA-1 89% good. CHARLIE-3 45% low RTB soon."
 """
     
-    MAX_CONTEXT_LENGTH = 400  # Keep under 512 token limit
+    MAX_CONTEXT_LENGTH = 800  # Allow full payload details
     
     def build_prompt(self, telemetry: 'TelemetryData', 
                      assessment: 'ThreatAssessment',
                      context_store=None) -> str:
         """
-        Construct compact prompt from telemetry and threat assessment.
-        Optimized to stay under 512 token context window.
+        Construct prompt with COMPLETE payload data for intelligent Q&A.
         
         Args:
             telemetry: Parsed telemetry data
             assessment: Computed threat assessment
-            context_store: Optional context store for historical data
+            context_store: Not used - LLM gets full current state instead
             
         Returns:
             Formatted prompt string for LLM inference
         """
-        # Get primary soldier
-        primary = telemetry.get_primary_soldier()
-        
-        # Build compact battlefield state
         prompt_parts = [self.SYSTEM_INSTRUCTION]
+        prompt_parts.append("\nCurrent Battlefield Data:")
         
-        # Compact squad info
-        squad_info = []
-        for s in telemetry.squad:
-            battery_warn = " LOW-BAT" if s.battery < 50 else ""
-            squad_info.append(f"{s.callsign}: HR{s.heart_rate} B{s.battery}%{battery_warn} {s.status}")
+        # Complete squad information - LLM will interpret status field
+        prompt_parts.append("\nSquad Members:")
+        for soldier in telemetry.squad:
+            prompt_parts.append(
+                f"- {soldier.callsign} (ID: {soldier.id})\n"
+                f"  Position: ({soldier.lat:.4f}, {soldier.lng:.4f})\n"
+                f"  Heart Rate: {soldier.heart_rate} bpm\n"
+                f"  Battery: {soldier.battery}%\n"
+                f"  Status: {soldier.status.upper()}"
+            )
         
-        prompt_parts.append(f"\nSquad: {', '.join(squad_info)}")
-        
-        # Enemy and distances
+        # Enemy information with distance
         prompt_parts.append(
-            f"Enemy: {telemetry.enemy.callsign} {assessment.enemy_distance:.0f}m {assessment.threat_level}"
+            f"\nEnemy:\n"
+            f"- {telemetry.enemy.callsign}\n"
+            f"  Position: ({telemetry.enemy.lat:.4f}, {telemetry.enemy.lng:.4f})\n"
+            f"  Distance from primary soldier: {assessment.enemy_distance:.1f} meters\n"
+            f"  Threat Level: {assessment.threat_level}"
         )
         
-        # Hostage
+        # Hostage information with distance
         prompt_parts.append(
-            f"Hostage: {assessment.hostage_distance:.0f}m {assessment.hostage_risk}"
+            f"\nHostage:\n"
+            f"- {telemetry.hostage.callsign}\n"
+            f"  Position: ({telemetry.hostage.lat:.4f}, {telemetry.hostage.lng:.4f})\n"
+            f"  Distance from primary soldier: {assessment.hostage_distance:.1f} meters\n"
+            f"  Risk Level: {assessment.hostage_risk}"
         )
         
-        # Recent context (only 1 entry to save space)
-        if context_store:
-            recent = context_store.get_recent_context(count=1)
-            if recent:
-                prompt_parts.append(f"Last: {recent[0]['decision']}")
+        # Threat assessment summary
+        prompt_parts.append(
+            f"\nThreat Assessment:\n"
+            f"- Primary Soldier: {assessment.primary_soldier_id}\n"
+            f"- Squad Status: {assessment.squad_status}\n"
+            f"- Risk Score: {assessment.risk_score:.2f}\n"
+            f"- Soldier Stress: {assessment.soldier_stress}"
+        )
         
-        # Voice message
+        # User question/message
         if telemetry.voice_message:
             prompt_parts.append(
-                f"\n{telemetry.voice_message.unit}: \"{telemetry.voice_message.message}\""
+                f"\nQuestion from {telemetry.voice_message.unit}:\n"
+                f"\"{telemetry.voice_message.message}\"\n"
+                f"\nYour response:"
             )
-            prompt_parts.append(f"\nRespond to {telemetry.voice_message.unit}:")
         else:
-            prompt_parts.append("\nTactical guidance:")
+            prompt_parts.append("\nProvide tactical guidance:")
         
         prompt = "\n".join(prompt_parts)
         
-        # Log token estimate (rough: 1 token ≈ 4 characters)
+        # Log size
         estimated_tokens = len(prompt) // 4
         logger.debug(f"Prompt: {len(prompt)} chars, ~{estimated_tokens} tokens")
         
