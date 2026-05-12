@@ -12,7 +12,7 @@ class Config:
     # ============================================================================
     # MQTT SETTINGS
     # ============================================================================
-    MQTT_BROKER_HOST: str = "10.82.246.146"  # MQTT broker address
+    MQTT_BROKER_HOST: str = "10.235.6.146"  # MQTT broker address
     MQTT_BROKER_PORT: int = 1883
     MQTT_TOPIC_SENSOR: str = "battlefield/sensor"
     MQTT_TOPIC_RESPONSE: str = "battlefield/ai-response"
